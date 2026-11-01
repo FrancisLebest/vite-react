@@ -4,7 +4,7 @@ import type {
   NavigatorScreenParams,
 } from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {CategoryId} from '../data/types';
+import type {CategoryId, SearchType} from '../api/types';
 
 export type TabParamList = {
   Home: undefined;
@@ -15,19 +15,36 @@ export type TabParamList = {
 };
 
 export type RootStackParamList = {
-  Tabs: NavigatorScreenParams<TabParamList>;
-  Search: {query?: string; category?: CategoryId} | undefined;
+  /* ---- signed out ---- */
+  Welcome: undefined;
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: {email?: string} | undefined;
+  ResetPassword: {email: string};
+
+  /* ---- signed in ---- */
+  Tabs: NavigatorScreenParams<TabParamList> | undefined;
+  Search:
+    | {query?: string; category?: CategoryId; type?: SearchType; openFilters?: boolean}
+    | undefined;
   Posts: undefined;
   Users: undefined;
   Communities: undefined;
   CommunityDetail: {communityId: string};
   UserProfile: {userId: string};
-  ContentDetail: {contentId: string};
+  ContentDetail: {postId: string};
   Chat: {conversationId: string};
   Notifications: undefined;
-  Comments: {targetId: string; baseCount?: number};
-  CreatePost: undefined;
-  CreateCommunity: undefined;
+  Comments: {postId: string};
+  CreateVideo: {communityId?: string} | undefined;
+  CreatePost: {communityId?: string} | undefined;
+  CreateCommunity: {communityId?: string} | undefined;
+  NewMessage: undefined;
+  EditProfile: undefined;
+  Settings: undefined;
+  ChangePassword: undefined;
+  BlockedUsers: undefined;
+  FollowList: {userId: string; kind: 'followers' | 'following'; title?: string};
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> =

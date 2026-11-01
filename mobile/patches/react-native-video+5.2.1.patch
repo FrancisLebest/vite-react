@@ -1,0 +1,25 @@
+diff --git a/node_modules/react-native-video/android-exoplayer/build.gradle b/node_modules/react-native-video/android-exoplayer/build.gradle
+index 6a9922b..63d5cea 100644
+--- a/node_modules/react-native-video/android-exoplayer/build.gradle
++++ b/node_modules/react-native-video/android-exoplayer/build.gradle
+@@ -5,8 +5,8 @@ def safeExtGet(prop, fallback) {
+ }
+ 
+ android {
+-    compileSdkVersion safeExtGet('compileSdkVersion', 28)
+-    buildToolsVersion safeExtGet('buildToolsVersion', '28.0.3')
++    compileSdkVersion safeExtGet('compileSdkVersion', 33)
++    buildToolsVersion safeExtGet('buildToolsVersion', '33.0.0')
+ 
+     compileOptions {
+         targetCompatibility JavaVersion.VERSION_1_8
+@@ -40,6 +40,8 @@ dependencies {
+     implementation('com.google.android.exoplayer:extension-okhttp:2.13.3') {
+         exclude group: 'com.squareup.okhttp3', module: 'okhttp'
+     }
+-    implementation 'com.squareup.okhttp3:okhttp:${OKHTTP_VERSION}'
++    // StudyHub patch: the original single-quoted '${OKHTTP_VERSION}' is never interpolated by Groovy.
++    // RN 0.72 ships OkHttp 4.9.2; align with it unless the root project overrides okhttpVersion.
++    implementation "com.squareup.okhttp3:okhttp:${safeExtGet('okhttpVersion', '4.9.2')}"
+ 
+ }

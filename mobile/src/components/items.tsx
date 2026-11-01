@@ -1,11 +1,24 @@
-import React from 'react';
-import {Image, Pressable, Share, StyleSheet, Text, View} from 'react-native';
+import React, {useState} from 'react';
+import {Alert, Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {useApp} from '../context/AppContext';
-import type {Community, ContentItem, Post, User} from '../data/types';
+import Video from 'react-native-video';
+import {errorMessage} from '../api';
+import type {Community, Post, User, UserSummary} from '../api/types';
+import {useAuth} from '../auth/AuthContext';
+import {mediaUrl} from '../config';
+import {categoryLabel} from '../constants/categories';
+import {
+  useDeletePost,
+  useSharePost,
+  useToggleBookmark,
+  useToggleFollow,
+  useToggleJoin,
+  useToggleLike,
+} from '../query/hooks';
 import {colors, font, radius, shadow, spacing, weight} from '../theme';
 import {formatCount} from '../utils/responsive';
-import {timeAgo} from '../utils/time';
+import {duration, timeAgo} from '../utils/time';
+import {confirmDestructive, useReport, useSheet} from './Sheet';
 import {
   Avatar,
   FollowButton,
@@ -17,34 +30,99 @@ import {
 } from './ui';
 
 /* ------------------------------------------------------------------ */
+/* Post options (delete own / report)                                  */
+/* ------------------------------------------------------------------ */
+
+export function usePostOptions() {
+  const {me} = useAuth();
+  const openSheet = useSheet();
+  const report = useReport();
+  const del = useDeletePost();
+  const navigation = useNavigation();
+  return (post: Post, onDeleted?: () => void) => {
+    const mine = post.author.id === me?.id;
+    openSheet({
+      title: post.type === 'video' ? 'Video' : 'Post',
+      options: mine
+        ? [
+            {
+              label: 'Delete',
+              icon: 'trash-outline',
+              destructive: true,
+              onPress: async () => {
+                const ok = await confirmDestructive(
+                  `Delete this ${post.type}?`,
+                  'This cannot be undone.',
+                  'Delete',
+                );
+                if (ok) {
+                  del.mutate(post.id, {
+                    onSuccess: onDeleted,
+                    onError: e => Alert.alert('Delete failed', errorMessage(e)),
+                  });
+                }
+              },
+            },
+          ]
+        : [
+            {
+              label: `View @${post.author.username}`,
+              icon: 'person-outline',
+              onPress: () => navigation.navigate('UserProfile', {userId: post.author.id}),
+            },
+            {
+              label: 'Report',
+              icon: 'flag-outline',
+              destructive: true,
+              onPress: () => report('post', post.id),
+            },
+          ],
+    });
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* Content (video lesson) row                                          */
 /* ------------------------------------------------------------------ */
 
-export function ContentRow({item}: {item: ContentItem}) {
-  const {getUser, state, dispatch} = useApp();
+export function ContentRow({item}: {item: Post}) {
   const navigation = useNavigation();
-  const author = getUser(item.authorId);
-  const saved = !!state.bookmarked[item.id];
+  const bookmark = useToggleBookmark();
+  const saved = item.bookmarkedByMe;
+  const thumb = mediaUrl(item.media?.thumbnailUrl ?? (item.media?.kind === 'image' ? item.media.url : null));
+  const title = item.text || categoryLabel(item.category);
   return (
     <Pressable
-      onPress={() => navigation.navigate('ContentDetail', {contentId: item.id})}
+      onPress={() => navigation.navigate('ContentDetail', {postId: item.id})}
       style={({pressed}) => [styles.contentRow, pressed && styles.pressed]}
       accessibilityRole="button"
-      accessibilityLabel={item.title}>
+      accessibilityLabel={title}>
       <View>
-        <Image source={{uri: item.thumbnail}} style={styles.thumb} />
-        <View style={styles.duration}>
-          <Text style={styles.durationText}>{item.duration}</Text>
-        </View>
+        {thumb ? (
+          <Image source={{uri: thumb}} style={styles.thumb} />
+        ) : (
+          <View style={[styles.thumb, styles.thumbIcon]}>
+            <Icon
+              name={item.type === 'video' ? 'play' : 'document-text-outline'}
+              size={24}
+              color={colors.primary}
+            />
+          </View>
+        )}
+        {item.media?.durationSec ? (
+          <View style={styles.duration}>
+            <Text style={styles.durationText}>{duration(item.media.durationSec)}</Text>
+          </View>
+        ) : null}
       </View>
       <View style={styles.contentBody}>
         <Text style={styles.contentTitle} numberOfLines={2}>
-          {item.title}
+          {title}
         </Text>
         <View style={styles.metaRow}>
-          <Avatar uri={author.avatar} size={20} />
+          <Avatar uri={item.author.avatarUrl} name={item.author.name} size={20} />
           <Text style={styles.meta} numberOfLines={1}>
-            {author.name} · {formatCount(item.views)} views
+            {item.author.name} · {formatCount(item.viewCount)} views
           </Text>
         </View>
       </View>
@@ -53,8 +131,40 @@ export function ContentRow({item}: {item: ContentItem}) {
         color={saved ? colors.primary : colors.text}
         size={20}
         label={saved ? 'Remove bookmark' : 'Bookmark'}
-        onPress={() => dispatch({type: 'toggleBookmark', id: item.id})}
+        onPress={() => bookmark.mutate(item)}
       />
+    </Pressable>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Grid tile (TikTok-style 3-column profile grid)                      */
+/* ------------------------------------------------------------------ */
+
+export function GridTile({post, size}: {post: Post; size: number}) {
+  const navigation = useNavigation();
+  const thumb = mediaUrl(
+    post.media?.thumbnailUrl ?? (post.media?.kind === 'image' ? post.media.url : null),
+  );
+  return (
+    <Pressable
+      onPress={() => navigation.navigate('ContentDetail', {postId: post.id})}
+      style={[styles.tile, {width: size, height: size * 1.33}]}
+      accessibilityRole="button"
+      accessibilityLabel={post.text || 'Open video'}>
+      {thumb ? (
+        <Image source={{uri: thumb}} style={StyleSheet.absoluteFill} />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.tileText]}>
+          <Text style={styles.tileCaption} numberOfLines={5}>
+            {post.text}
+          </Text>
+        </View>
+      )}
+      <View style={styles.tileViews}>
+        <Icon name="play-outline" size={12} color={colors.white} />
+        <Text style={styles.tileViewsText}>{formatCount(post.viewCount)}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -63,14 +173,29 @@ export function ContentRow({item}: {item: ContentItem}) {
 /* User row                                                            */
 /* ------------------------------------------------------------------ */
 
-export function UserRow({user, compact}: {user: User; compact?: boolean}) {
-  const {state, dispatch} = useApp();
+export function UserRow({
+  user,
+  compact,
+  right,
+  onPress,
+}: {
+  user: UserSummary | User;
+  compact?: boolean;
+  right?: React.ReactNode;
+  onPress?: () => void;
+}) {
   const navigation = useNavigation();
+  const {me} = useAuth();
+  const follow = useToggleFollow();
+  const full = 'followerCount' in user ? user : null;
+  const isMe = user.id === me?.id;
   return (
     <Pressable
-      onPress={() => navigation.navigate('UserProfile', {userId: user.id})}
+      onPress={onPress ?? (() => navigation.navigate('UserProfile', {userId: user.id}))}
+      accessibilityRole="button"
+      accessibilityLabel={user.name}
       style={({pressed}) => [styles.row, pressed && styles.pressed]}>
-      <Avatar uri={user.avatar} size={52} />
+      <Avatar uri={user.avatarUrl} name={user.name} size={52} />
       <View style={styles.rowBody}>
         <View style={styles.nameRow}>
           <Text style={styles.name} numberOfLines={1}>
@@ -79,23 +204,25 @@ export function UserRow({user, compact}: {user: User; compact?: boolean}) {
           {user.verified ? <VerifiedBadge /> : null}
         </View>
         <Text style={styles.sub} numberOfLines={1}>
-          {compact ? `@${user.handle}` : user.university}
+          {compact || !user.university ? `@${user.username}` : user.university}
         </Text>
         <Text style={styles.subMuted} numberOfLines={1}>
-          {compact
-            ? user.university
-            : `${formatCount(user.followers)} Followers · ${
-                user.mutual
-              } Mutual`}
+          {full && !compact
+            ? `${formatCount(full.followerCount)} Followers · ${full.mutualCount} Mutual`
+            : user.university ?? roleLabel(user.role)}
         </Text>
       </View>
-      <FollowButton
-        following={!!state.following[user.id]}
-        onPress={() => dispatch({type: 'toggleFollow', userId: user.id})}
-      />
+      {right !== undefined ? (
+        right
+      ) : isMe ? null : (
+        <FollowButton following={user.isFollowing} onPress={() => follow.mutate(user)} />
+      )}
     </Pressable>
   );
 }
+
+const roleLabel = (r: UserSummary['role']) =>
+  r === 'professor' ? 'Professor' : r === 'creator' ? 'Creator' : 'Student';
 
 /* ------------------------------------------------------------------ */
 /* Community row + card                                                */
@@ -110,73 +237,63 @@ export function CommunityRow({
   showChevron?: boolean;
   joinable?: boolean;
 }) {
-  const {state, dispatch} = useApp();
   const navigation = useNavigation();
-  const joined = !!state.joined[community.id];
+  const join = useToggleJoin();
   return (
     <Pressable
-      onPress={() =>
-        navigation.navigate('CommunityDetail', {communityId: community.id})
-      }
+      onPress={() => navigation.navigate('CommunityDetail', {communityId: community.id})}
+      accessibilityRole="button"
+      accessibilityLabel={community.name}
       style={({pressed}) => [styles.row, pressed && styles.pressed]}>
-      <IconAvatar name={community.icon} color={community.color} size={48} />
+      <CommunityAvatar community={community} size={48} />
       <View style={styles.rowBody}>
         <Text style={styles.name} numberOfLines={1}>
           {community.name}
         </Text>
-        <Text style={styles.sub}>
-          {formatCount(community.members + (joined ? 1 : 0))} Members
-        </Text>
+        <Text style={styles.sub}>{formatCount(community.memberCount)} Members</Text>
       </View>
-      {joinable ? (
-        <JoinButton
-          joined={joined}
-          onPress={() =>
-            dispatch({type: 'toggleJoin', communityId: community.id})
-          }
-        />
+      {joinable && !community.isOwner ? (
+        <JoinButton joined={community.isMember} onPress={() => join.mutate(community)} />
       ) : null}
       {showChevron ? (
-        <Icon
-          name="chevron-forward"
-          size={18}
-          color={colors.text}
-          style={styles.chevron}
-        />
+        <Icon name="chevron-forward" size={18} color={colors.text} style={styles.chevron} />
       ) : null}
     </Pressable>
   );
 }
 
-export function CommunityCard({
-  community,
-  width,
-}: {
-  community: Community;
-  width: number;
-}) {
-  const {state, dispatch} = useApp();
+export function CommunityAvatar({community, size}: {community: Community; size: number}) {
+  const uri = mediaUrl(community.avatarUrl);
+  if (uri) {
+    return (
+      <Image
+        source={{uri}}
+        style={{width: size, height: size, borderRadius: size / 2, backgroundColor: colors.primarySoft}}
+      />
+    );
+  }
+  return <IconAvatar name={community.icon || 'people'} color={community.color} size={size} />;
+}
+
+export function CommunityCard({community, width}: {community: Community; width: number}) {
   const navigation = useNavigation();
-  const joined = !!state.joined[community.id];
+  const join = useToggleJoin();
   return (
     <Pressable
-      onPress={() =>
-        navigation.navigate('CommunityDetail', {communityId: community.id})
-      }
+      onPress={() => navigation.navigate('CommunityDetail', {communityId: community.id})}
+      accessibilityRole="button"
+      accessibilityLabel={community.name}
       style={[styles.card, {width}]}>
-      <IconAvatar name={community.icon} color={community.color} size={44} />
+      <CommunityAvatar community={community} size={44} />
       <Text style={styles.cardTitle} numberOfLines={2}>
         {community.name}
       </Text>
-      <Text style={styles.cardSub}>
-        {formatCount(community.members)} Members
-      </Text>
-      <JoinButton
-        joined={joined}
-        onPress={() =>
-          dispatch({type: 'toggleJoin', communityId: community.id})
-        }
-      />
+      <Text style={styles.cardSub}>{formatCount(community.memberCount)} Members</Text>
+      {community.isOwner ? (
+        <Text style={styles.owner}>Owner</Text>
+      ) : (
+        <JoinButton joined={community.isMember} onPress={() => join.mutate(community)} />
+      )}
     </Pressable>
   );
 }
@@ -185,23 +302,25 @@ export function CommunityCard({
 /* Post card                                                           */
 /* ------------------------------------------------------------------ */
 
-export function PostCard({post}: {post: Post}) {
-  const {getUser, state, dispatch} = useApp();
+export function PostCard({post, onDeleted}: {post: Post; onDeleted?: () => void}) {
   const navigation = useNavigation();
-  const author = getUser(post.authorId);
-  const liked = !!state.liked[post.id];
-  const saved = !!state.bookmarked[post.id];
-  const commentCount = state.comments[post.id]?.length ?? 0;
+  const like = useToggleLike();
+  const bookmark = useToggleBookmark();
+  const share = useSharePost();
+  const options = usePostOptions();
+  const author = post.author;
+  const image = post.media?.kind === 'image' ? mediaUrl(post.media.url) : undefined;
+  const videoThumb = post.media?.kind === 'video' ? mediaUrl(post.media.thumbnailUrl) : undefined;
 
   return (
     <View style={styles.post}>
       <View style={styles.postHeader}>
         <Pressable
           style={styles.postAuthor}
-          onPress={() =>
-            navigation.navigate('UserProfile', {userId: author.id})
-          }>
-          <Avatar uri={author.avatar} size={42} />
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${author.name}'s profile`}
+          onPress={() => navigation.navigate('UserProfile', {userId: author.id})}>
+          <Avatar uri={author.avatarUrl} name={author.name} size={42} />
           <View style={styles.rowBody}>
             <View style={styles.nameRow}>
               <Text style={styles.name} numberOfLines={1}>
@@ -210,86 +329,127 @@ export function PostCard({post}: {post: Post}) {
               {author.verified ? <VerifiedBadge /> : null}
             </View>
             <Text style={styles.subMuted} numberOfLines={1}>
-              {author.university} · {timeAgo(post.createdAt)}
+              {[author.university, post.community?.name, timeAgo(post.createdAt)]
+                .filter(Boolean)
+                .join(' · ')}
             </Text>
           </View>
         </Pressable>
-        <IconButton name="ellipsis-horizontal" label="More options" size={20} />
+        <IconButton
+          name="ellipsis-horizontal"
+          label="More options"
+          size={20}
+          onPress={() => options(post, onDeleted)}
+        />
       </View>
 
-      <Text style={styles.postText}>{post.text}</Text>
-      {post.hashtags.length ? (
-        <Text style={styles.postTags}>
-          {post.hashtags.map(h => `#${h}`).join(' ')}
-        </Text>
-      ) : null}
-
-      {post.image ? (
-        <Image source={{uri: post.image}} style={styles.postImage} />
-      ) : null}
-
-      {post.audio ? (
-        <View style={styles.audioRow}>
-          <View style={styles.audio}>
-            <View style={styles.play}>
-              <Icon name="play" size={16} color={colors.white} />
+      <Pressable onPress={() => navigation.navigate('ContentDetail', {postId: post.id})}>
+        {post.text ? <Text style={styles.postText}>{post.text}</Text> : null}
+        {post.hashtags.length ? (
+          <Text style={styles.postTags}>{post.hashtags.map(h => `#${h}`).join(' ')}</Text>
+        ) : null}
+        {image ? <Image source={{uri: image}} style={styles.postImage} /> : null}
+        {post.media?.kind === 'video' ? (
+          <View style={styles.postImage}>
+            {videoThumb ? (
+              <Image source={{uri: videoThumb}} style={[StyleSheet.absoluteFill, styles.radius]} />
+            ) : null}
+            <View style={styles.playOverlay}>
+              <Icon name="play" size={28} color={colors.white} />
             </View>
-            <Waveform />
-            <Text style={styles.audioTime}>{post.audio.duration}</Text>
           </View>
-          {post.audio.attachment ? (
-            <Image
-              source={{uri: post.audio.attachment}}
-              style={styles.audioAttachment}
-            />
-          ) : null}
-        </View>
+        ) : null}
+      </Pressable>
+      {post.media?.kind === 'audio' ? (
+        <AudioPlayer uri={post.media.url} durationSec={post.media.durationSec} />
       ) : null}
 
       <View style={styles.actions}>
         <Action
-          icon={liked ? 'heart' : 'heart-outline'}
-          color={liked ? colors.danger : colors.text}
-          label={String(post.likes + (liked ? 1 : 0))}
-          a11y={liked ? 'Unlike' : 'Like'}
-          onPress={() => dispatch({type: 'toggleLike', id: post.id})}
+          icon={post.likedByMe ? 'heart' : 'heart-outline'}
+          color={post.likedByMe ? colors.danger : colors.text}
+          label={formatCount(post.likeCount)}
+          a11y={post.likedByMe ? 'Unlike' : 'Like'}
+          onPress={() => like.mutate(post)}
         />
         <Action
           icon="chatbubble-outline"
-          label={String(commentCount)}
+          label={formatCount(post.commentCount)}
           a11y="Comments"
-          onPress={() => navigation.navigate('Comments', {targetId: post.id})}
+          onPress={() => navigation.navigate('Comments', {postId: post.id})}
         />
         <Action
           icon="arrow-redo-outline"
-          label={String(post.shares)}
+          label={formatCount(post.shareCount)}
           a11y="Share"
-          onPress={() =>
-            Share.share({message: post.text}).catch(() => undefined)
-          }
+          onPress={() => share(post)}
         />
         <View style={styles.flex} />
         <IconButton
-          name={saved ? 'bookmark' : 'bookmark-outline'}
-          color={saved ? colors.primary : colors.text}
+          name={post.bookmarkedByMe ? 'bookmark' : 'bookmark-outline'}
+          color={post.bookmarkedByMe ? colors.primary : colors.text}
           size={20}
-          label={saved ? 'Remove bookmark' : 'Bookmark'}
-          onPress={() => dispatch({type: 'toggleBookmark', id: post.id})}
+          label={post.bookmarkedByMe ? 'Remove bookmark' : 'Bookmark'}
+          onPress={() => bookmark.mutate(post)}
         />
       </View>
     </View>
   );
 }
 
-const BARS = [
-  6, 12, 18, 10, 22, 14, 8, 16, 24, 12, 6, 14, 20, 10, 16, 8, 12, 18, 6, 10,
-];
-function Waveform() {
+/* ------------------------------------------------------------------ */
+/* Audio (voice note) player                                           */
+/* ------------------------------------------------------------------ */
+
+const BARS = [6, 12, 18, 10, 22, 14, 8, 16, 24, 12, 6, 14, 20, 10, 16, 8, 12, 18, 6, 10];
+
+export function AudioPlayer({uri, durationSec}: {uri: string; durationSec: number | null}) {
+  const [playing, setPlaying] = useState(false);
+  const [position, setPosition] = useState(0);
+  const [total, setTotal] = useState(durationSec ?? 0);
+  const src = mediaUrl(uri);
+  const progress = total > 0 ? position / total : 0;
   return (
-    <View style={styles.wave}>
-      {BARS.map((h, i) => (
-        <View key={i} style={[styles.bar, {height: h}]} />
-      ))}
+    <View style={styles.audioRow}>
+      <View style={styles.audio}>
+        <Pressable
+          style={styles.play}
+          onPress={() => setPlaying(p => !p)}
+          accessibilityRole="button"
+          accessibilityLabel={playing ? 'Pause voice note' : 'Play voice note'}>
+          <Icon name={playing ? 'pause' : 'play'} size={16} color={colors.white} />
+        </Pressable>
+        <View style={styles.wave}>
+          {BARS.map((h, i) => (
+            <View
+              key={i}
+              style={[
+                styles.bar,
+                {height: h},
+                i / BARS.length < progress && styles.barPlayed,
+              ]}
+            />
+          ))}
+        </View>
+        <Text style={styles.audioTime}>{duration(playing ? position : total) || '0:00'}</Text>
+      </View>
+      {playing && src ? (
+        <Video
+          source={{uri: src}}
+          audioOnly
+          paused={!playing}
+          playInBackground={false}
+          ignoreSilentSwitch="ignore"
+          style={styles.hidden}
+          onLoad={d => setTotal(d.duration)}
+          onProgress={p => setPosition(p.currentTime)}
+          onEnd={() => {
+            setPlaying(false);
+            setPosition(0);
+          }}
+          onError={() => setPlaying(false)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -323,6 +483,8 @@ function Action({
 const styles = StyleSheet.create({
   pressed: {opacity: 0.7},
   flex: {flex: 1},
+  radius: {borderRadius: radius.md},
+  hidden: {width: 0, height: 0},
   contentRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -340,6 +502,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: colors.primarySoft,
   },
+  thumbIcon: {alignItems: 'center', justifyContent: 'center'},
   duration: {
     position: 'absolute',
     right: 6,
@@ -349,23 +512,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 1,
   },
-  durationText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: weight.semibold,
-  },
+  durationText: {color: colors.white, fontSize: 10, fontWeight: weight.semibold},
   contentBody: {flex: 1, marginLeft: spacing.md},
-  contentTitle: {
-    fontSize: font.md,
-    fontWeight: weight.semibold,
-    color: colors.text,
-  },
+  contentTitle: {fontSize: font.md, fontWeight: weight.semibold, color: colors.text},
   metaRow: {flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm},
-  meta: {
+  meta: {fontSize: font.xs, color: colors.textSecondary, marginLeft: 6, flexShrink: 1},
+  tile: {
+    backgroundColor: colors.primarySoft,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.white,
+    overflow: 'hidden',
+  },
+  tileText: {padding: spacing.sm, justifyContent: 'center'},
+  tileCaption: {fontSize: font.xs, color: colors.primary},
+  tileViews: {
+    position: 'absolute',
+    left: 4,
+    bottom: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tileViewsText: {
+    color: colors.white,
     fontSize: font.xs,
-    color: colors.textSecondary,
-    marginLeft: 6,
-    flexShrink: 1,
+    fontWeight: weight.semibold,
+    marginLeft: 2,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 2,
   },
   row: {
     flexDirection: 'row',
@@ -403,10 +576,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     minHeight: font.sm * 2.6,
   },
-  cardSub: {
-    fontSize: font.xs,
-    color: colors.textSecondary,
-    marginVertical: spacing.sm,
+  cardSub: {fontSize: font.xs, color: colors.textSecondary, marginVertical: spacing.sm},
+  owner: {
+    fontSize: font.sm,
+    color: colors.primary,
+    fontWeight: weight.semibold,
+    height: 32,
+    textAlignVertical: 'center',
+    lineHeight: 32,
   },
   post: {
     backgroundColor: colors.white,
@@ -414,11 +591,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 6,
     borderBottomColor: colors.surface,
   },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-  },
+  postHeader: {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg},
   postAuthor: {flex: 1, flexDirection: 'row', alignItems: 'center'},
   postText: {
     fontSize: font.md,
@@ -439,6 +612,11 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: radius.md,
     backgroundColor: colors.primarySoft,
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   audioRow: {
     flexDirection: 'row',
@@ -462,30 +640,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wave: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: spacing.sm,
-  },
+  wave: {flex: 1, flexDirection: 'row', alignItems: 'center', marginHorizontal: spacing.sm},
   bar: {
     flex: 1,
     marginHorizontal: 1,
     borderRadius: 2,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: '#CFC6F3',
   },
-  audioTime: {
-    fontSize: font.xs,
-    color: colors.textSecondary,
-    marginRight: spacing.xs,
-  },
-  audioAttachment: {
-    width: 72,
-    height: 52,
-    borderRadius: radius.sm,
-    marginLeft: spacing.sm,
-    backgroundColor: colors.primarySoft,
-  },
+  barPlayed: {backgroundColor: colors.primaryLight},
+  audioTime: {fontSize: font.xs, color: colors.textSecondary, marginRight: spacing.xs},
   actions: {
     flexDirection: 'row',
     alignItems: 'center',

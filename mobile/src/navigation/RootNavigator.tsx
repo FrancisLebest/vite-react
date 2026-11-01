@@ -1,15 +1,25 @@
 import React from 'react';
-import {Platform, Pressable, StyleSheet, View} from 'react-native';
+import {Platform, Pressable, StyleSheet, Text, View} from 'react-native';
 import {
   BottomTabBarButtonProps,
   createBottomTabNavigator,
 } from '@react-navigation/bottom-tabs';
+import {useNavigation} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Icon} from '../components/ui';
-import {useApp} from '../context/AppContext';
-import {colors, font} from '../theme';
+import {useAuth} from '../auth/AuthContext';
+import {useSheet} from '../components/Sheet';
+import {ErrorState, Icon, LoadingState, Logo} from '../components/ui';
+import {useUnreadCounts} from '../query/messaging';
+import {SocketProvider} from '../realtime/SocketProvider';
+import {colors, font, spacing, weight} from '../theme';
 import type {RootStackParamList, TabParamList} from './types';
+
+import WelcomeScreen from '../screens/auth/WelcomeScreen';
+import LoginScreen from '../screens/auth/LoginScreen';
+import RegisterScreen from '../screens/auth/RegisterScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 
 import HomeScreen from '../screens/HomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
@@ -26,7 +36,14 @@ import ChatScreen from '../screens/ChatScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import CommentsScreen from '../screens/CommentsScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
+import CreateVideoScreen from '../screens/CreateVideoScreen';
 import CreateCommunityScreen from '../screens/CreateCommunityScreen';
+import NewMessageScreen from '../screens/NewMessageScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
+import BlockedUsersScreen from '../screens/BlockedUsersScreen';
+import FollowListScreen from '../screens/FollowListScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -54,13 +71,37 @@ function renderTabIcon(name: keyof TabParamList): IconRenderer {
   );
 }
 
+/** "+" tab: opens a chooser (Video / Post) instead of a screen. */
 function CreateTabButton(props: BottomTabBarButtonProps) {
+  const openSheet = useSheet();
+  const navigation = useNavigation();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Create post"
+      accessibilityLabel="Create"
       style={props.style}
-      onPress={props.onPress}>
+      onPress={() =>
+        openSheet({
+          title: 'Create',
+          options: [
+            {
+              label: 'Video',
+              icon: 'videocam-outline',
+              onPress: () => navigation.navigate('CreateVideo'),
+            },
+            {
+              label: 'Post',
+              icon: 'create-outline',
+              onPress: () => navigation.navigate('CreatePost'),
+            },
+            {
+              label: 'Community',
+              icon: 'people-outline',
+              onPress: () => navigation.navigate('CreateCommunity'),
+            },
+          ],
+        })
+      }>
       <View style={styles.createButton}>
         <Icon name="add" size={28} color={colors.white} />
       </View>
@@ -69,8 +110,9 @@ function CreateTabButton(props: BottomTabBarButtonProps) {
 }
 
 function Tabs() {
-  const {unreadMessages} = useApp();
+  const unread = useUnreadCounts();
   const insets = useSafeAreaInsets();
+  const inboxBadge = unread.conversations + unread.notifications;
   return (
     <Tab.Navigator
       screenOptions={({route}) => ({
@@ -95,21 +137,15 @@ function Tabs() {
         component={EmptyScreen}
         options={{
           tabBarLabel: () => null,
-          tabBarAccessibilityLabel: 'Create post',
+          tabBarAccessibilityLabel: 'Create',
           tabBarButton: CreateTabButton,
         }}
-        listeners={({navigation}) => ({
-          tabPress: e => {
-            e.preventDefault();
-            navigation.navigate('CreatePost');
-          },
-        })}
       />
       <Tab.Screen
         name="Inbox"
         component={InboxScreen}
         options={{
-          tabBarBadge: unreadMessages || undefined,
+          tabBarBadge: inboxBadge ? (inboxBadge > 99 ? '99+' : inboxBadge) : undefined,
           tabBarBadgeStyle: styles.tabBadge,
         }}
       />
@@ -118,38 +154,87 @@ function Tabs() {
   );
 }
 
-export default function RootNavigator() {
+const modalOptions = {
+  presentation: Platform.OS === 'ios' ? ('modal' as const) : ('card' as const),
+  animation:
+    Platform.OS === 'ios' ? ('default' as const) : ('slide_from_bottom' as const),
+};
+
+function SplashScreen({error, onRetry}: {error?: string | null; onRetry: () => void}) {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: {backgroundColor: colors.background},
-        // 'default' keeps the platform native push animation (iOS 12 / Android 7 safe)
-        animation: 'default',
-      }}>
-      <Stack.Screen name="Tabs" component={Tabs} />
-      <Stack.Screen name="Search" component={SearchScreen} />
-      <Stack.Screen name="Posts" component={PostsScreen} />
-      <Stack.Screen name="Users" component={UsersScreen} />
-      <Stack.Screen name="Communities" component={CommunitiesScreen} />
-      <Stack.Screen name="CommunityDetail" component={CommunityDetailScreen} />
-      <Stack.Screen name="UserProfile" component={UserProfileScreen} />
-      <Stack.Screen name="ContentDetail" component={ContentDetailScreen} />
-      <Stack.Screen name="Chat" component={ChatScreen} />
-      <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Group
+    <View style={styles.splash}>
+      <Logo size={64} />
+      <Text style={styles.brand}>StudyHub</Text>
+      {error ? (
+        <ErrorState title="Can't reach StudyHub" message={error} onRetry={onRetry} />
+      ) : (
+        <LoadingState label="Restoring your session" style={styles.splashLoader} />
+      )}
+    </View>
+  );
+}
+
+export default function RootNavigator() {
+  const {status, me, bootError, retryBoot} = useAuth();
+
+  if (status === 'booting') {
+    return <SplashScreen error={bootError} onRetry={retryBoot} />;
+  }
+
+  if (status === 'signedOut' || !me) {
+    return (
+      <Stack.Navigator
         screenOptions={{
-          presentation: Platform.OS === 'ios' ? 'modal' : 'card',
-          animation: Platform.OS === 'ios' ? 'default' : 'slide_from_bottom',
+          headerShown: false,
+          contentStyle: {backgroundColor: colors.background},
+          animation: 'default',
         }}>
-        <Stack.Screen name="Comments" component={CommentsScreen} />
-        <Stack.Screen name="CreatePost" component={CreatePostScreen} />
-        <Stack.Screen
-          name="CreateCommunity"
-          component={CreateCommunityScreen}
-        />
-      </Stack.Group>
-    </Stack.Navigator>
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      </Stack.Navigator>
+    );
+  }
+
+  return (
+    <SocketProvider meId={me.id}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: {backgroundColor: colors.background},
+          // 'default' keeps the platform native push animation (iOS 12 / Android 7 safe)
+          animation: 'default',
+        }}>
+        <Stack.Screen name="Tabs" component={Tabs} />
+        <Stack.Screen name="Search" component={SearchScreen} />
+        <Stack.Screen name="Posts" component={PostsScreen} />
+        <Stack.Screen name="Users" component={UsersScreen} />
+        <Stack.Screen name="Communities" component={CommunitiesScreen} />
+        <Stack.Screen name="CommunityDetail" component={CommunityDetailScreen} />
+        <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+        <Stack.Screen name="ContentDetail" component={ContentDetailScreen} />
+        <Stack.Screen name="Chat" component={ChatScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
+        <Stack.Screen name="FollowList" component={FollowListScreen} />
+        <Stack.Group screenOptions={modalOptions}>
+          <Stack.Screen name="Comments" component={CommentsScreen} />
+          <Stack.Screen name="CreatePost" component={CreatePostScreen} />
+          <Stack.Screen
+            name="CreateVideo"
+            component={CreateVideoScreen}
+            options={{gestureEnabled: false}}
+          />
+          <Stack.Screen name="CreateCommunity" component={CreateCommunityScreen} />
+          <Stack.Screen name="NewMessage" component={NewMessageScreen} />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        </Stack.Group>
+      </Stack.Navigator>
+    </SocketProvider>
   );
 }
 
@@ -179,4 +264,18 @@ const styles = StyleSheet.create({
       default: {elevation: 4},
     }),
   },
+  splash: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    padding: spacing.xl,
+  },
+  brand: {
+    fontSize: font.title,
+    fontWeight: weight.bold,
+    color: colors.primary,
+    marginTop: spacing.sm,
+  },
+  splashLoader: {flexGrow: 0, marginTop: spacing.xl},
 });

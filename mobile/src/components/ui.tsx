@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
+import {mediaUrl} from '../config';
 import {
   MAX_CONTENT_WIDTH,
   colors,
@@ -52,27 +54,58 @@ export function Logo({
 
 export function Avatar({
   uri,
+  name,
   size = 44,
   online,
   ring,
   style,
 }: {
-  uri?: string;
+  uri?: string | null;
+  /** Used for the initials fallback when there is no photo. */
+  name?: string;
   size?: number;
   online?: boolean;
   ring?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const src = mediaUrl(uri);
+  const initials = (name ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0]?.toUpperCase())
+    .join('');
   return (
-    <View style={[{width: size, height: size}, style]}>
-      <Image
-        source={uri ? {uri} : {}}
-        style={[
-          styles.avatar,
-          {width: size, height: size, borderRadius: size / 2},
-          ring && styles.avatarRing,
-        ]}
-      />
+    <View
+      style={[{width: size, height: size}, style]}
+      accessibilityLabel={name ? `${name}'s avatar` : undefined}>
+      {src ? (
+        <Image
+          source={{uri: src}}
+          style={[
+            styles.avatar,
+            {width: size, height: size, borderRadius: size / 2},
+            ring && styles.avatarRing,
+          ]}
+        />
+      ) : (
+        <View
+          style={[
+            styles.avatar,
+            styles.center,
+            {width: size, height: size, borderRadius: size / 2},
+            ring && styles.avatarRing,
+          ]}>
+          {initials ? (
+            <Text
+              style={[styles.initials, {fontSize: Math.max(10, size * 0.36)}]}>
+              {initials}
+            </Text>
+          ) : (
+            <Icon name="person" size={size * 0.5} color={colors.primary} />
+          )}
+        </View>
+      )}
       {online ? (
         <View
           style={[
@@ -181,6 +214,8 @@ export function PillButton({
   small,
   style,
   disabled,
+  loading,
+  accessibilityLabel,
 }: {
   title: string;
   onPress?: () => void;
@@ -189,6 +224,8 @@ export function PillButton({
   small?: boolean;
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
+  loading?: boolean;
+  accessibilityLabel?: string;
 }) {
   const fg =
     variant === 'solid'
@@ -199,19 +236,22 @@ export function PillButton({
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || loading}
       accessibilityRole="button"
-      accessibilityState={{disabled}}
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{disabled: !!(disabled || loading), busy: !!loading}}
       style={({pressed}) => [
         styles.pill,
         small && styles.pillSmall,
         variant === 'solid' && styles.pillSolid,
         variant === 'outline' && styles.pillOutline,
         variant === 'soft' && styles.pillSoft,
-        (pressed || disabled) && styles.pressed,
+        (pressed || disabled || loading) && styles.pressed,
         style,
       ]}>
-      {icon ? (
+      {loading ? (
+        <ActivityIndicator color={fg} size="small" style={styles.pillIcon} />
+      ) : icon ? (
         <Icon
           name={icon}
           size={small ? 14 : 18}
@@ -466,6 +506,7 @@ const styles = StyleSheet.create({
   pressed: {opacity: 0.6},
   center: {alignItems: 'center', justifyContent: 'center'},
   avatar: {backgroundColor: colors.primarySoft},
+  initials: {color: colors.primary, fontWeight: weight.bold},
   avatarRing: {borderWidth: 2, borderColor: colors.white},
   onlineDot: {
     position: 'absolute',
@@ -676,4 +717,252 @@ const screenStyles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: spacing.sm,
   },
+});
+
+/* ------------------------------------------------------------------ */
+/* Async states                                                        */
+/* ------------------------------------------------------------------ */
+
+export function LoadingState({
+  label = 'Loading…',
+  dark,
+  style,
+}: {
+  label?: string;
+  dark?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View
+      style={[stateStyles.center, style]}
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}>
+      <ActivityIndicator color={dark ? colors.white : colors.primary} />
+    </View>
+  );
+}
+
+export function ErrorState({
+  message,
+  onRetry,
+  dark,
+  title = "Couldn't load this",
+}: {
+  message?: string;
+  onRetry?: () => void;
+  dark?: boolean;
+  title?: string;
+}) {
+  return (
+    <View style={stateStyles.center} accessibilityRole="alert">
+      <IconAvatar name="cloud-offline-outline" size={64} />
+      <Text style={[stateStyles.title, dark && stateStyles.light]}>
+        {title}
+      </Text>
+      {message ? (
+        <Text style={[stateStyles.message, dark && stateStyles.lightMuted]}>
+          {message}
+        </Text>
+      ) : null}
+      {onRetry ? (
+        <PillButton
+          small
+          title="Try again"
+          icon="refresh"
+          onPress={onRetry}
+          style={stateStyles.retry}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+/** Footer for paginated lists: spinner while fetching the next page. */
+export function ListFooter({
+  loading,
+  error,
+  onRetry,
+}: {
+  loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
+}) {
+  if (loading) {
+    return (
+      <View style={stateStyles.footer}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+  if (error && onRetry) {
+    return (
+      <Pressable
+        style={stateStyles.footer}
+        onPress={onRetry}
+        accessibilityRole="button">
+        <Text style={stateStyles.footerRetry}>
+          Couldn't load more. Tap to retry.
+        </Text>
+      </Pressable>
+    );
+  }
+  return <View style={stateStyles.footerSpacer} />;
+}
+
+export function ProgressBar({
+  progress,
+  label,
+}: {
+  progress: number;
+  label?: string;
+}) {
+  const pct = Math.round(Math.min(Math.max(progress, 0), 1) * 100);
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityValue={{min: 0, max: 100, now: pct}}
+      accessibilityLabel={label ?? 'Upload progress'}>
+      <View style={stateStyles.track}>
+        <View style={[stateStyles.bar, {width: `${pct}%`}]} />
+      </View>
+      <Text style={stateStyles.pct}>
+        {label ? `${label} · ` : ''}
+        {pct}%
+      </Text>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Text field with label + inline error                                */
+/* ------------------------------------------------------------------ */
+
+export function TextField({
+  label,
+  error,
+  hint,
+  secure,
+  style,
+  inputStyle,
+  ...props
+}: TextInputProps & {
+  label: string;
+  error?: string | null;
+  hint?: string;
+  secure?: boolean;
+  style?: StyleProp<ViewStyle>;
+  inputStyle?: TextInputProps['style'];
+}) {
+  const [hidden, setHidden] = React.useState(!!secure);
+  return (
+    <View style={[fieldStyles.wrap, style]}>
+      <Text style={fieldStyles.label}>{label}</Text>
+      <View style={[fieldStyles.box, error ? fieldStyles.boxError : null]}>
+        <TextInput
+          accessibilityLabel={label}
+          accessibilityHint={error ?? hint}
+          placeholderTextColor={colors.textMuted}
+          underlineColorAndroid="transparent"
+          secureTextEntry={hidden}
+          style={[
+            fieldStyles.input,
+            props.multiline && fieldStyles.multiline,
+            inputStyle,
+          ]}
+          {...props}
+        />
+        {secure ? (
+          <Pressable
+            onPress={() => setHidden(h => !h)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? 'Show password' : 'Hide password'}>
+            <Icon
+              name={hidden ? 'eye-outline' : 'eye-off-outline'}
+              size={20}
+              color={colors.textSecondary}
+            />
+          </Pressable>
+        ) : null}
+      </View>
+      {error ? (
+        <Text style={fieldStyles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : hint ? (
+        <Text style={fieldStyles.hint}>{hint}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+const stateStyles = StyleSheet.create({
+  center: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xxxl,
+  },
+  title: {
+    fontSize: font.lg,
+    fontWeight: weight.bold,
+    color: colors.text,
+    marginTop: spacing.lg,
+    textAlign: 'center',
+  },
+  message: {
+    fontSize: font.md,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
+  light: {color: colors.white},
+  lightMuted: {color: 'rgba(255,255,255,0.8)'},
+  retry: {marginTop: spacing.lg},
+  footer: {paddingVertical: spacing.xl, alignItems: 'center'},
+  footerSpacer: {height: spacing.xl},
+  footerRetry: {color: colors.primary, fontWeight: weight.semibold},
+  track: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primarySoft,
+    overflow: 'hidden',
+  },
+  bar: {height: 8, borderRadius: 4, backgroundColor: colors.primary},
+  pct: {
+    marginTop: spacing.xs,
+    fontSize: font.sm,
+    color: colors.textSecondary,
+    textAlign: 'right',
+  },
+});
+
+const fieldStyles = StyleSheet.create({
+  wrap: {marginTop: spacing.md},
+  label: {
+    fontSize: font.sm,
+    fontWeight: weight.semibold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  box: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.white,
+  },
+  boxError: {borderColor: colors.danger},
+  input: {
+    flex: 1,
+    fontSize: font.md,
+    color: colors.text,
+    paddingVertical: spacing.sm,
+  },
+  multiline: {minHeight: 96, textAlignVertical: 'top'},
+  error: {color: colors.danger, fontSize: font.sm, marginTop: 4},
+  hint: {color: colors.textMuted, fontSize: font.xs, marginTop: 4},
 });

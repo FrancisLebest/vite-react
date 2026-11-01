@@ -1,9 +1,12 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {StatusBar} from 'react-native';
 import {DefaultTheme, NavigationContainer} from '@react-navigation/native';
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {AppProvider} from './src/context/AppContext';
+import {AuthProvider} from './src/auth/AuthContext';
+import {SheetProvider} from './src/components/Sheet';
 import RootNavigator from './src/navigation/RootNavigator';
+import {createQueryClient, setupFocusManager} from './src/query/queryClient';
 import {colors} from './src/theme';
 
 const navTheme = {
@@ -19,15 +22,21 @@ const navTheme = {
   },
 };
 
-export default function App() {
+export default function App({queryClient}: {queryClient?: QueryClient}) {
+  const [qc] = useState(() => queryClient ?? createQueryClient());
+  useEffect(() => setupFocusManager(), []);
   return (
-    <SafeAreaProvider>
-      <AppProvider>
-        <NavigationContainer theme={navTheme}>
-          <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
-          <RootNavigator />
-        </NavigationContainer>
-      </AppProvider>
-    </SafeAreaProvider>
+    <QueryClientProvider client={qc}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <SheetProvider>
+            <NavigationContainer theme={navTheme}>
+              <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+              <RootNavigator />
+            </NavigationContainer>
+          </SheetProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </QueryClientProvider>
   );
 }

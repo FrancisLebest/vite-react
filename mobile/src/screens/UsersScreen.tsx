@@ -1,51 +1,39 @@
-import React, {useMemo, useState} from 'react';
-import {FlatList, StyleSheet} from 'react-native';
+import React, {useState} from 'react';
+import {FlatList, RefreshControl, StyleSheet} from 'react-native';
+import {errorMessage} from '../api';
+import type {UsersParams} from '../api/types';
 import {UserRow} from '../components/items';
 import {
   BackHeader,
   ChipRow,
   EmptyState,
+  ErrorState,
   IconButton,
+  ListFooter,
+  LoadingState,
   Screen,
   SearchInput,
 } from '../components/ui';
-import {useApp} from '../context/AppContext';
-import {ME_ID} from '../data/mock';
+import {useUsers} from '../query/hooks';
 import type {RootScreenProps} from '../navigation/types';
-import {spacing} from '../theme';
+import {colors, spacing} from '../theme';
+import {useDebounced} from '../utils/hooks';
 
 type Segment = 'all' | 'students' | 'professors' | 'creators';
 
+const SEGMENTS: Record<Segment, UsersParams> = {
+  all: {sort: 'popular'},
+  students: {role: 'student', sort: 'popular'},
+  professors: {role: 'professor', sort: 'popular'},
+  creators: {role: 'creator', sort: 'popular'},
+};
+
 export default function UsersScreen({navigation}: RootScreenProps<'Users'>) {
-  const {state} = useApp();
   const [segment, setSegment] = useState<Segment>('all');
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
-
-  const data = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return state.users
-      .filter(u => u.id !== ME_ID)
-      .filter(u => {
-        switch (segment) {
-          case 'students':
-            return u.role === 'student';
-          case 'professors':
-            return u.role === 'professor';
-          case 'creators':
-            return u.role === 'creator';
-          default:
-            return true;
-        }
-      })
-      .filter(
-        u =>
-          !q ||
-          u.name.toLowerCase().includes(q) ||
-          u.university.toLowerCase().includes(q),
-      )
-      .sort((a, b) => (segment === 'creators' ? b.followers - a.followers : 0));
-  }, [state.users, segment, query]);
+  const q = useDebounced(query.trim(), 350);
+  const list = useUsers({...SEGMENTS[segment], q: q || undefined});
 
   return (
     <Screen>
@@ -65,7 +53,7 @@ export default function UsersScreen({navigation}: RootScreenProps<'Users'>) {
               name="funnel-outline"
               label="Advanced search"
               style={styles.ml}
-              onPress={() => navigation.navigate('Search', {})}
+              onPress={() => navigation.navigate('Search', {type: 'users', openFilters: true})}
             />
           </>
         }
@@ -76,7 +64,7 @@ export default function UsersScreen({navigation}: RootScreenProps<'Users'>) {
           value={query}
           onChangeText={setQuery}
           onClear={() => setQuery('')}
-          placeholder="Search by name or university"
+          placeholder="Search by name or username"
           style={styles.search}
         />
       ) : null}
@@ -92,12 +80,36 @@ export default function UsersScreen({navigation}: RootScreenProps<'Users'>) {
         style={styles.chips}
       />
       <FlatList
-        data={data}
+        data={list.items}
         keyExtractor={u => u.id}
         renderItem={({item}) => <UserRow user={item} />}
         keyboardShouldPersistTaps="handled"
+        onEndReached={list.loadMore}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={styles.grow}
+        refreshControl={
+          <RefreshControl
+            refreshing={list.refreshing}
+            onRefresh={list.refresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        ListFooterComponent={
+          <ListFooter loading={list.isFetchingNextPage} />
+        }
         ListEmptyComponent={
-          <EmptyState icon="people-outline" title="No users found" />
+          list.isLoading ? (
+            <LoadingState />
+          ) : list.isError ? (
+            <ErrorState message={errorMessage(list.error)} onRetry={() => list.refetch()} />
+          ) : (
+            <EmptyState
+              icon="people-outline"
+              title="No users found"
+              message={q ? `Nobody matches "${q}".` : undefined}
+            />
+          )
         }
       />
     </Screen>
@@ -106,6 +118,7 @@ export default function UsersScreen({navigation}: RootScreenProps<'Users'>) {
 
 const styles = StyleSheet.create({
   ml: {marginLeft: spacing.md},
+  grow: {flexGrow: 1},
   search: {marginHorizontal: spacing.lg, marginBottom: spacing.sm},
   chips: {paddingBottom: spacing.sm},
 });
