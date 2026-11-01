@@ -15,8 +15,34 @@ export function getIO(): Server | null {
 
 export const room = (userId: string) => `user:${userId}`;
 
+// In a separate worker process there is no Socket.IO server: events are relayed through Redis.
+let emitter: { to(room: string): { emit(event: string, payload: unknown): unknown } } | null = null;
+let emitterClient: { quit(): Promise<unknown> } | null = null;
+
+export async function initRedisEmitter(): Promise<void> {
+  if (io || emitter || !config.REDIS_URL) return;
+  const { createClient } = await import('redis');
+  const { Emitter } = await import('@socket.io/redis-emitter');
+  const client = createClient({ url: config.REDIS_URL });
+  await client.connect();
+  emitterClient = client;
+  emitter = new Emitter(client);
+}
+
+export async function closeRedisEmitter(): Promise<void> {
+  await emitterClient?.quit().catch(() => undefined);
+  emitter = null;
+  emitterClient = null;
+}
+
 export function emitToUser(userId: string, event: string, payload: unknown): void {
-  io?.to(room(userId)).emit(event, payload);
+  if (io) io.to(room(userId)).emit(event, payload);
+  else emitter?.to(room(userId)).emit(event, payload);
+}
+
+/** Disconnects every socket of a user (e.g. after a suspension). */
+export function disconnectUser(userId: string): void {
+  io?.in(room(userId)).disconnectSockets(true);
 }
 
 const typingSchema = z.object({ conversationId: z.string().uuid() });
@@ -47,7 +73,7 @@ export async function attachSocket(server: http.Server): Promise<Server> {
         socket.data.userId = viewer.id;
         next();
       })
-      .catch(() => next(new Error('UNAUTHORIZED')));
+      .catch((err) => next(new Error(err?.code === 'ACCOUNT_SUSPENDED' ? 'ACCOUNT_SUSPENDED' : 'UNAUTHORIZED')));
   });
 
   io.on('connection', (socket) => {

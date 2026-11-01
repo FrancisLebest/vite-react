@@ -5,6 +5,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'RATE_LIMITED'
+  | 'ACCOUNT_SUSPENDED'
   | 'INTERNAL';
 
 const STATUS: Record<ErrorCode, number> = {
@@ -14,6 +15,7 @@ const STATUS: Record<ErrorCode, number> = {
   NOT_FOUND: 404,
   CONFLICT: 409,
   RATE_LIMITED: 429,
+  ACCOUNT_SUSPENDED: 403,
   INTERNAL: 500,
 };
 
@@ -34,6 +36,8 @@ export const badRequest = (message: string, details?: unknown) => new ApiError('
 export const unauthorized = (message = 'Authentication required') => new ApiError('UNAUTHORIZED', message);
 export const forbidden = (message = 'You are not allowed to do this') => new ApiError('FORBIDDEN', message);
 export const notFound = (what = 'Resource') => new ApiError('NOT_FOUND', `${what} not found`);
+export const suspended = (reason: string | null) =>
+  new ApiError('ACCOUNT_SUSPENDED', 'This account has been suspended', { reason });
 export const conflict = (message: string, details?: unknown) => new ApiError('CONFLICT', message, details);
 
 export function errorBody(code: ErrorCode, message: string, details?: unknown) {

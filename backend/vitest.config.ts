@@ -19,6 +19,9 @@ export default defineConfig({
       TMP_DIR: 'tmp/test-tmp',
       RATE_LIMIT_ENABLED: 'false',
       STORAGE_DRIVER: 'local',
+      // v1 tests expect synchronous video handling; pipeline tests opt in explicitly.
+      VIDEO_TRANSCODE: 'false',
+      CONTENT_FILTER: 'mask',
     },
   },
 });

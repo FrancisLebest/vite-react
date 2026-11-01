@@ -48,8 +48,22 @@ const schema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().default('StudyHub <no-reply@studyhub.app>'),
-  // Realtime scaling (optional)
+  // Realtime scaling + job queue (optional)
   REDIS_URL: z.string().optional(),
+  // Video pipeline
+  VIDEO_TRANSCODE: bool(true),
+  VIDEO_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(1),
+  VIDEO_MAX_HEIGHT: z.coerce.number().int().min(240).max(2160).default(720),
+  WORKER_IN_API: z.string().optional(),
+  // Push notifications (FCM HTTP v1)
+  FCM_PROJECT_ID: z.string().optional(),
+  FCM_CREDENTIALS_JSON: z.string().optional(),
+  FCM_CREDENTIALS_FILE: z.string().optional(),
+  FCM_API_URL: z.string().default('https://fcm.googleapis.com'),
+  // Content filter
+  CONTENT_FILTER: z.enum(['mask', 'reject', 'off']).default('mask'),
+  CONTENT_FILTER_WORDS: z.string().default(''),
+  CONTENT_FILTER_DEFAULTS: bool(true),
 });
 
 // Empty values (e.g. `S3_BUCKET=` in .env) mean "not set".
@@ -75,6 +89,8 @@ export const config = {
     const n = Number(v);
     return Number.isInteger(n) ? n : env.TRUST_PROXY;
   })(),
+  /** Run the video worker inside the API process (always true without Redis). */
+  workerInApi: !env.REDIS_URL || ['1', 'true', 'yes'].includes((env.WORKER_IN_API ?? '').toLowerCase()),
   isTest: env.NODE_ENV === 'test',
   isProd: env.NODE_ENV === 'production',
 };

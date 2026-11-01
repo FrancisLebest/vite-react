@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { pipeline } from 'node:stream/promises';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
 
@@ -12,6 +13,8 @@ export interface Storage {
   putFile(key: string, filePath: string, contentType: string): Promise<void>;
   delete(key: string): Promise<void>;
   url(key: string): string;
+  /** Copies a stored object to a local file. */
+  download(key: string, destPath: string): Promise<void>;
 }
 
 export const uploadRoot = path.resolve(config.UPLOAD_DIR);
@@ -28,6 +31,9 @@ class LocalStorage implements Storage {
   }
   url(key: string): string {
     return `${config.PUBLIC_URL}/uploads/${key}`;
+  }
+  async download(key: string, destPath: string): Promise<void> {
+    await fsp.copyFile(this.resolve(key), destPath);
   }
   private resolve(key: string): string {
     const p = path.resolve(uploadRoot, key);
@@ -80,6 +86,11 @@ class S3Storage implements Storage {
   }
   url(key: string): string {
     return `${this.publicBase}/${key}`;
+  }
+  async download(key: string, destPath: string): Promise<void> {
+    const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    if (!res.Body) throw new Error(`Empty S3 object ${key}`);
+    await pipeline(res.Body as NodeJS.ReadableStream, fs.createWriteStream(destPath));
   }
 }
 

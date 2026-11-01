@@ -230,3 +230,116 @@ export async function storeAvatar(file: Express.Multer.File): Promise<string> {
   const res = await processImage(file, keys, { square: 512 });
   return res.key;
 }
+
+// ---------------------------------------------------------------------------------- video pipeline
+
+function videoGeometry(info: Probe) {
+  const video = info.streams?.find((s) => s.codec_type === 'video');
+  if (!video) throw badRequest('The uploaded file has no video stream');
+  const duration = info.format?.duration ? Number(info.format.duration) : null;
+  let width = video.width ?? null;
+  let height = video.height ?? null;
+  const rotation = Math.abs(
+    Number(video.side_data_list?.find((d) => d.rotation !== undefined)?.rotation ?? video.tags?.rotate ?? 0),
+  );
+  if (rotation === 90 || rotation === 270) [width, height] = [height, width];
+  return {
+    durationSec: duration !== null && Number.isFinite(duration) ? Math.round(duration * 100) / 100 : null,
+    width,
+    height,
+  };
+}
+
+async function extractThumbnail(input: string, durationSec: number | null): Promise<string> {
+  const thumb = tmpPath('.jpg');
+  const at = durationSec && durationSec > 2 ? 1 : durationSec ? durationSec / 3 : 0;
+  await run(config.FFMPEG_PATH, ['-v', 'error', '-y', '-ss', at.toFixed(2), '-i', input, '-frames:v', '1', '-vf', "scale='min(720,iw)':-2", '-q:v', '3', thumb], {
+    timeout: 60_000,
+  });
+  return thumb;
+}
+
+/**
+ * Upload step of the async pipeline: validates the video with ffprobe, stores the original as-is
+ * and a quick preview frame. The transcoding job later replaces both.
+ */
+export async function storeVideoSource(file: Express.Multer.File): Promise<StoredMedia> {
+  if (detectKind(file) !== 'video') throw badRequest('Expected an mp4/mov video');
+  if (file.size > SIZE_LIMITS.video) {
+    throw new ApiError('VALIDATION_ERROR', `File too large: video must be ≤ ${SIZE_LIMITS.video / MB} MB`, undefined, 413);
+  }
+  const geo = videoGeometry(await probe(file.path));
+  const keys: string[] = [];
+  try {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const key = newKey('originals', VIDEO_EXT.has(ext) ? ext : '.mp4');
+    await storage.putFile(key, file.path, file.mimetype && file.mimetype !== 'application/octet-stream' ? file.mimetype : 'video/mp4');
+    keys.push(key);
+    let thumbnailKey: string | null = null;
+    try {
+      const thumb = await extractThumbnail(file.path, geo.durationSec);
+      try {
+        thumbnailKey = newKey('thumbnails', '.jpg');
+        await storage.putFile(thumbnailKey, thumb, 'image/jpeg');
+        keys.push(thumbnailKey);
+      } finally {
+        await fsp.rm(thumb, { force: true });
+      }
+    } catch (err) {
+      logger.warn({ err }, 'Preview thumbnail failed');
+      thumbnailKey = null;
+    }
+    return { kind: 'video', key, thumbnailKey, ...geo };
+  } catch (err) {
+    deleteKeys(keys);
+    throw err;
+  }
+}
+
+/**
+ * Transcodes a local video file to H.264 High/AAC MP4 (shorter side ≤ VIDEO_MAX_HEIGHT, faststart),
+ * stores it plus a fresh thumbnail, and returns the stored media.
+ */
+export async function transcodeAndStore(inputPath: string): Promise<StoredMedia> {
+  const max = config.VIDEO_MAX_HEIGHT;
+  const out = tmpPath('.mp4');
+  const tmpFiles = [out];
+  const keys: string[] = [];
+  try {
+    const scale = `scale=w='if(gte(iw,ih),-2,trunc(min(${max},iw)/2)*2)':h='if(gte(iw,ih),trunc(min(${max},ih)/2)*2,-2)'`;
+    await run(
+      config.FFMPEG_PATH,
+      [
+        '-v', 'error', '-y', '-i', inputPath,
+        '-map', '0:v:0', '-map', '0:a:0?',
+        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
+        '-vf', scale,
+        '-c:a', 'aac', '-b:a', '128k', '-ac', '2',
+        '-movflags', '+faststart', '-max_muxing_queue_size', '1024',
+        out,
+      ],
+      { timeout: 30 * 60_000, maxBuffer: 10 * MB },
+    );
+    const geo = videoGeometry(await probe(out));
+    let thumbnailKey: string | null = null;
+    try {
+      const thumb = await extractThumbnail(out, geo.durationSec);
+      tmpFiles.push(thumb);
+      thumbnailKey = newKey('thumbnails', '.jpg');
+      await storage.putFile(thumbnailKey, thumb, 'image/jpeg');
+      keys.push(thumbnailKey);
+    } catch (err) {
+      logger.warn({ err }, 'Thumbnail generation failed');
+      thumbnailKey = null;
+    }
+    const key = newKey('videos', '.mp4');
+    await storage.putFile(key, out, 'video/mp4');
+    keys.push(key);
+    return { kind: 'video', key, thumbnailKey, ...geo };
+  } catch (err) {
+    deleteKeys(keys);
+    throw err;
+  } finally {
+    await Promise.all(tmpFiles.map((f) => fsp.rm(f, { force: true })));
+  }
+}
