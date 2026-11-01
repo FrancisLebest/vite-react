@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -6,26 +6,28 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
-import {Chip, Icon, IconButton, PillButton, Screen} from '../components/ui';
-import {newId, useApp} from '../context/AppContext';
-import type {Community} from '../data/types';
+import {useQueryClient} from '@tanstack/react-query';
+import {api, isApiError} from '../api';
+import type {CommunityKind} from '../api/types';
+import {
+  Chip,
+  Icon,
+  IconButton,
+  LoadingState,
+  PillButton,
+  Screen,
+  TextField,
+} from '../components/ui';
+import {FormError} from './auth/AuthLayout';
+import {COMMUNITY_COLORS, COMMUNITY_ICONS} from '../constants/categories';
+import {useCommunity} from '../query/hooks';
+import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
 import {colors, font, radius, spacing, weight} from '../theme';
 
-const ICONS = [
-  'school-outline',
-  'book-outline',
-  'code-slash-outline',
-  'flask-outline',
-  'calculator-outline',
-  'bulb-outline',
-  'musical-notes-outline',
-  'basketball-outline',
-];
-const KINDS: {key: Community['kind']; label: string}[] = [
+const KINDS: {key: CommunityKind; label: string}[] = [
   {key: 'university', label: 'University'},
   {key: 'faculty', label: 'Faculty'},
   {key: 'topic', label: 'Topic'},
@@ -33,124 +35,154 @@ const KINDS: {key: Community['kind']; label: string}[] = [
 
 export default function CreateCommunityScreen({
   navigation,
+  route,
 }: RootScreenProps<'CreateCommunity'>) {
-  const {dispatch} = useApp();
+  const editId = route.params?.communityId;
+  const qc = useQueryClient();
+  const existing = useCommunity(editId ?? '', !!editId);
+  const editing = !!editId;
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [kind, setKind] = useState<Community['kind']>('topic');
-  const [icon, setIcon] = useState(ICONS[0]);
+  const [kind, setKind] = useState<CommunityKind>('topic');
+  const [icon, setIcon] = useState(COMMUNITY_ICONS[0]);
+  const [color, setColor] = useState(COMMUNITY_COLORS[0]);
   const [touched, setTouched] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [prefilled, setPrefilled] = useState(false);
 
+  useEffect(() => {
+    if (editing && existing.data && !prefilled) {
+      const c = existing.data;
+      setName(c.name);
+      setDescription(c.description ?? '');
+      setKind(c.kind);
+      setIcon(c.icon || COMMUNITY_ICONS[0]);
+      setColor(c.color || COMMUNITY_COLORS[0]);
+      setPrefilled(true);
+    }
+  }, [editing, existing.data, prefilled]);
+
+  const trimmed = name.trim();
   const nameError =
-    name.trim().length < 3 ? 'Name must be at least 3 characters.' : null;
+    trimmed.length < 3
+      ? 'Name must be at least 3 characters.'
+      : trimmed.length > 60
+      ? 'Name must be 60 characters or less.'
+      : null;
 
-  const create = () => {
+  const submit = async () => {
     setTouched(true);
+    setFormError(null);
     if (nameError) {
       return;
     }
-    const community: Community = {
-      id: newId('k'),
-      name: name.trim(),
-      description: description.trim() || 'A new community on StudyHub.',
-      members: 0,
-      icon,
-      color: colors.primary,
-      kind,
-    };
-    dispatch({type: 'createCommunity', community});
-    navigation.replace('CommunityDetail', {communityId: community.id});
+    setSaving(true);
+    const body = {name: trimmed, description: description.trim(), kind, icon, color};
+    try {
+      const saved = editId
+        ? await api.communities.update(editId, body)
+        : await api.communities.create(body);
+      qc.setQueryData(qk.community(saved.id), saved);
+      qc.invalidateQueries(['communities']);
+      if (editing) {
+        navigation.goBack();
+      } else {
+        navigation.replace('CommunityDetail', {communityId: saved.id});
+      }
+    } catch (e) {
+      setSaving(false);
+      setFormError(
+        isApiError(e) && e.code === 'CONFLICT'
+          ? 'A community with this name already exists.'
+          : isApiError(e)
+          ? e.fields.name ?? e.message
+          : 'Could not save the community.',
+      );
+    }
   };
+
+  if (editing && existing.isLoading) {
+    return (
+      <Screen>
+        <LoadingState />
+      </Screen>
+    );
+  }
 
   return (
     <Screen edges={Platform.OS === 'ios' ? ['bottom'] : ['top', 'bottom']}>
       <View style={styles.header}>
-        <IconButton
-          name="close"
-          label="Cancel"
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={styles.title}>Create a Community</Text>
+        <IconButton name="close" label="Cancel" onPress={() => navigation.goBack()} />
+        <Text style={styles.title}>{editing ? 'Edit Community' : 'Create a Community'}</Text>
         <View style={styles.spacer} />
       </View>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled">
-          <Text style={styles.label} nativeID="nameLabel">
-            Community name
-          </Text>
-          <TextInput
-            accessibilityLabelledBy="nameLabel"
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <TextField
+            label="Community name"
             value={name}
             onChangeText={setName}
             onBlur={() => setTouched(true)}
             placeholder="e.g. Biology Study Group"
-            placeholderTextColor={colors.textMuted}
-            style={[
-              styles.input,
-              touched && nameError ? styles.inputError : null,
-            ]}
+            error={touched ? nameError : null}
             maxLength={60}
-            underlineColorAndroid="transparent"
           />
-          {touched && nameError ? (
-            <Text style={styles.error}>{nameError}</Text>
-          ) : null}
-
-          <Text style={styles.label} nativeID="descLabel">
-            Description (optional)
-          </Text>
-          <TextInput
-            accessibilityLabelledBy="descLabel"
+          <TextField
+            label="Description (optional)"
             value={description}
             onChangeText={setDescription}
             placeholder="What is this community about?"
-            placeholderTextColor={colors.textMuted}
-            style={[styles.input, styles.multiline]}
             multiline
-            textAlignVertical="top"
-            maxLength={240}
-            underlineColorAndroid="transparent"
+            maxLength={500}
           />
 
           <Text style={styles.label}>Type</Text>
           <View style={styles.wrap}>
             {KINDS.map(k => (
-              <Chip
-                key={k.key}
-                label={k.label}
-                active={kind === k.key}
-                onPress={() => setKind(k.key)}
-              />
+              <Chip key={k.key} label={k.label} active={kind === k.key} onPress={() => setKind(k.key)} />
             ))}
           </View>
 
           <Text style={styles.label}>Icon</Text>
           <View style={styles.wrap}>
-            {ICONS.map(i => (
+            {COMMUNITY_ICONS.map(i => (
               <Pressable
                 key={i}
                 onPress={() => setIcon(i)}
                 accessibilityRole="radio"
+                accessibilityLabel={i.replace('-outline', '')}
                 accessibilityState={{selected: icon === i}}
-                style={[styles.iconTile, icon === i && styles.iconTileActive]}>
-                <Icon
-                  name={i}
-                  size={24}
-                  color={icon === i ? colors.white : colors.primary}
-                />
+                style={[styles.iconTile, icon === i && {backgroundColor: color, borderColor: color}]}>
+                <Icon name={i} size={24} color={icon === i ? colors.white : colors.primary} />
               </Pressable>
             ))}
           </View>
+
+          <Text style={styles.label}>Color</Text>
+          <View style={styles.wrap}>
+            {COMMUNITY_COLORS.map(c => (
+              <Pressable
+                key={c}
+                onPress={() => setColor(c)}
+                accessibilityRole="radio"
+                accessibilityLabel={`Color ${c}`}
+                accessibilityState={{selected: color === c}}
+                style={[styles.swatch, {backgroundColor: c}, color === c && styles.swatchActive]}>
+                {color === c ? <Icon name="checkmark" size={18} color={colors.white} /> : null}
+              </Pressable>
+            ))}
+          </View>
+          <FormError message={formError} />
         </ScrollView>
         <View style={styles.footer}>
           <PillButton
-            title="Create Community"
-            icon="add-circle"
-            onPress={create}
+            title={editing ? 'Save changes' : 'Create Community'}
+            icon={editing ? 'checkmark' : 'add-circle'}
+            loading={saving}
+            onPress={submit}
           />
         </View>
       </KeyboardAvoidingView>
@@ -179,18 +211,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    fontSize: font.md,
-    color: colors.text,
-  },
-  inputError: {borderColor: colors.danger},
-  error: {color: colors.danger, fontSize: font.sm, marginTop: 4},
-  multiline: {height: 110, paddingTop: spacing.md},
   wrap: {flexDirection: 'row', flexWrap: 'wrap'},
   iconTile: {
     width: 52,
@@ -204,9 +224,15 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
     marginBottom: spacing.sm,
   },
-  iconTileActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+  swatch: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  swatchActive: {borderWidth: 3, borderColor: colors.primarySoft},
   footer: {padding: spacing.lg},
 });

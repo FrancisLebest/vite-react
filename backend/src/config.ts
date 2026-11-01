@@ -52,7 +52,8 @@ const schema = z.object({
   REDIS_URL: z.string().optional(),
 });
 
-const parsed = schema.safeParse(process.env);
+// Empty values (e.g. `S3_BUCKET=` in .env) mean "not set".
+const parsed = schema.safeParse(Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== '')));
 if (!parsed.success) {
   const msg = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
   // eslint-disable-next-line no-console

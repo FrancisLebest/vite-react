@@ -1,0 +1,44 @@
+# Production-like stack: PostgreSQL + API (+ uploads volume).
+# Usage: cp .env.example .env  (set JWT_SECRET, PUBLIC_URL, POSTGRES_PASSWORD)  &&  docker compose up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: studyhub
+      POSTGRES_USER: studyhub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studyhub}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studyhub -d studyhub"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgres://studyhub:${POSTGRES_PASSWORD:-studyhub}@db:5432/studyhub
+      DATABASE_SSL: "false"
+      UPLOAD_DIR: /app/uploads
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4000}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    volumes:
+      - uploads:/app/uploads
+
+volumes:
+  pgdata:
+  uploads:

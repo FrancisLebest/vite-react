@@ -296,8 +296,12 @@ export function useCommunities(p: CommunitiesParams) {
   return useCursorList<Community>(qk.communities(p), cursor => api.communities.list(p, cursor));
 }
 
-export function useCommunity(id: string) {
-  return useQuery({queryKey: qk.community(id), queryFn: () => api.communities.get(id)});
+export function useCommunity(id: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.community(id),
+    queryFn: () => api.communities.get(id),
+    enabled,
+  });
 }
 
 export function useToggleJoin() {

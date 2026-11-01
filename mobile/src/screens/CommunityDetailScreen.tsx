@@ -1,97 +1,227 @@
-import React from 'react';
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import React, {useState} from 'react';
+import {Alert, FlatList, RefreshControl, StyleSheet, Text, View} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {PostCard} from '../components/items';
+import {useQueryClient} from '@tanstack/react-query';
+import {api, errorMessage} from '../api';
+import type {Post, UserSummary} from '../api/types';
+import {CommunityAvatar, PostCard, UserRow} from '../components/items';
+import {confirmDestructive, useReport, useSheet} from '../components/Sheet';
 import {
   BackHeader,
+  ChipRow,
   EmptyState,
-  Icon,
+  ErrorState,
+  IconButton,
+  ListFooter,
+  LoadingState,
   PillButton,
   Screen,
-  SectionHeader,
 } from '../components/ui';
-import {useApp} from '../context/AppContext';
+import {removeFromPages} from '../query/cache';
+import {useCommunity, useCursorList, useToggleJoin} from '../query/hooks';
+import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
 import {colors, font, radius, spacing, weight} from '../theme';
 import {formatCount} from '../utils/responsive';
+
+type Tab = 'posts' | 'members';
 
 export default function CommunityDetailScreen({
   route,
   navigation,
 }: RootScreenProps<'CommunityDetail'>) {
-  const {state, dispatch} = useApp();
-  const community = state.communities.find(
-    c => c.id === route.params.communityId,
+  const {communityId} = route.params;
+  const qc = useQueryClient();
+  const openSheet = useSheet();
+  const report = useReport();
+  const join = useToggleJoin();
+  const [tab, setTab] = useState<Tab>('posts');
+  const community = useCommunity(communityId);
+  const posts = useCursorList<Post>(qk.communityPosts(communityId), c =>
+    api.communities.posts(communityId, c),
+  );
+  const members = useCursorList<UserSummary>(
+    qk.communityMembers(communityId),
+    c => api.communities.members(communityId, c),
+    {enabled: tab === 'members'},
   );
 
-  if (!community) {
+  if (community.isLoading) {
     return (
       <Screen>
         <BackHeader title="Community" />
-        <EmptyState
-          icon="alert-circle-outline"
-          title="This community no longer exists"
+        <LoadingState />
+      </Screen>
+    );
+  }
+  if (community.isError || !community.data) {
+    return (
+      <Screen>
+        <BackHeader title="Community" />
+        <ErrorState
+          message={errorMessage(community.error)}
+          onRetry={() => community.refetch()}
         />
       </Screen>
     );
   }
+  const c = community.data;
 
-  const joined = !!state.joined[community.id];
-  // Demo: show posts from the community's category of interest.
-  const posts = state.posts.slice(0, 3);
+  const remove = async () => {
+    const ok = await confirmDestructive(
+      `Delete ${c.name}?`,
+      'The community and its membership list will be permanently deleted.',
+      'Delete community',
+    );
+    if (!ok) {
+      return;
+    }
+    try {
+      await api.communities.remove(c.id);
+      removeFromPages(qc, [['communities']], c.id);
+      qc.removeQueries(qk.community(c.id));
+      navigation.goBack();
+    } catch (e) {
+      Alert.alert('Delete failed', errorMessage(e));
+    }
+  };
+
+  const openOptions = () =>
+    openSheet({
+      title: c.name,
+      options: c.isOwner
+        ? [
+            {
+              label: 'Edit community',
+              icon: 'create-outline',
+              onPress: () => navigation.navigate('CreateCommunity', {communityId: c.id}),
+            },
+            {label: 'Delete community', icon: 'trash-outline', destructive: true, onPress: remove},
+          ]
+        : [
+            {
+              label: 'Report community',
+              icon: 'flag-outline',
+              destructive: true,
+              onPress: () => report('community', c.id),
+            },
+          ],
+    });
+
+  const header = (
+    <View>
+      <LinearGradient
+        colors={[c.color || colors.primary, colors.primaryDark]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}
+        style={styles.hero}>
+        <View style={styles.heroIcon}>
+          <CommunityAvatar community={c} size={64} />
+        </View>
+        <Text style={styles.title}>{c.name}</Text>
+        <Text style={styles.members}>
+          {formatCount(c.memberCount)} Members · {formatCount(c.postCount)} Posts
+        </Text>
+      </LinearGradient>
+
+      {c.description ? <Text style={styles.description}>{c.description}</Text> : null}
+
+      <View style={styles.actions}>
+        {c.isOwner ? (
+          <PillButton
+            title="Edit"
+            icon="create-outline"
+            variant="soft"
+            style={styles.flex}
+            onPress={() => navigation.navigate('CreateCommunity', {communityId: c.id})}
+          />
+        ) : (
+          <PillButton
+            title={c.isMember ? 'Joined' : 'Join Community'}
+            icon={c.isMember ? 'checkmark' : 'add'}
+            variant={c.isMember ? 'soft' : 'solid'}
+            style={styles.flex}
+            accessibilityLabel={c.isMember ? 'Leave community' : 'Join community'}
+            onPress={() => join.mutate(c)}
+          />
+        )}
+        {c.isMember ? (
+          <PillButton
+            title="Post"
+            icon="create-outline"
+            variant="outline"
+            style={styles.post}
+            onPress={() => navigation.navigate('CreatePost', {communityId: c.id})}
+          />
+        ) : null}
+      </View>
+
+      <ChipRow
+        items={[
+          {key: 'posts', label: 'Posts'},
+          {key: 'members', label: 'Members'},
+        ]}
+        value={tab}
+        onChange={setTab}
+        style={styles.tabs}
+      />
+    </View>
+  );
+
+  const list = tab === 'posts' ? posts : members;
 
   return (
     <Screen>
-      <BackHeader title={community.name} />
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <LinearGradient
-          colors={[community.color, colors.primaryDark]}
-          start={{x: 0, y: 0}}
-          end={{x: 1, y: 1}}
-          style={styles.hero}>
-          <View style={styles.heroIcon}>
-            <Icon name={community.icon} size={36} color={community.color} />
-          </View>
-          <Text style={styles.title}>{community.name}</Text>
-          <Text style={styles.members}>
-            {formatCount(community.members + (joined ? 1 : 0))} Members
-          </Text>
-        </LinearGradient>
-
-        <Text style={styles.description}>{community.description}</Text>
-
-        <View style={styles.actions}>
-          <PillButton
-            title={joined ? 'Joined' : 'Join Community'}
-            icon={joined ? 'checkmark' : 'add'}
-            variant={joined ? 'soft' : 'solid'}
-            style={styles.flex}
-            onPress={() =>
-              dispatch({type: 'toggleJoin', communityId: community.id})
-            }
+      <BackHeader
+        title={c.name}
+        right={<IconButton name="ellipsis-horizontal" label="Community options" onPress={openOptions} />}
+      />
+      <FlatList<Post | UserSummary>
+        data={list.items as (Post | UserSummary)[]}
+        keyExtractor={i => i.id}
+        renderItem={({item}) =>
+          tab === 'posts' ? <PostCard post={item as Post} /> : <UserRow user={item as UserSummary} compact />
+        }
+        ListHeaderComponent={header}
+        onEndReached={list.loadMore}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={list.refreshing}
+            onRefresh={() => {
+              community.refetch();
+              list.refresh();
+            }}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
-          {joined ? (
-            <PillButton
-              title="Post"
-              icon="create-outline"
-              variant="outline"
-              style={styles.post}
-              onPress={() => navigation.navigate('CreatePost')}
+        }
+        ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
+        ListEmptyComponent={
+          list.isLoading ? (
+            <LoadingState />
+          ) : list.isError ? (
+            <ErrorState message={errorMessage(list.error)} onRetry={() => list.refetch()} />
+          ) : tab === 'posts' ? (
+            <EmptyState
+              icon="chatbubbles-outline"
+              title="No discussions yet"
+              message={c.isMember ? 'Start the first one!' : 'Join to start a discussion.'}
+              action={
+                c.isMember
+                  ? {
+                      label: 'Create a post',
+                      onPress: () => navigation.navigate('CreatePost', {communityId: c.id}),
+                    }
+                  : undefined
+              }
             />
-          ) : null}
-        </View>
-
-        <SectionHeader title="Recent Discussions" />
-        {joined ? (
-          posts.map(p => <PostCard key={p.id} post={p} />)
-        ) : (
-          <EmptyState
-            icon="lock-closed-outline"
-            title="Join to see discussions"
-            message="Members can read and post in this community."
-          />
-        )}
-      </ScrollView>
+          ) : (
+            <EmptyState icon="people-outline" title="No members yet" />
+          )
+        }
+      />
     </Screen>
   );
 }
@@ -127,10 +257,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
-  actions: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.lg,
-  },
+  actions: {flexDirection: 'row', paddingHorizontal: spacing.lg, marginTop: spacing.lg},
   post: {marginLeft: spacing.md},
+  tabs: {marginTop: spacing.lg, paddingBottom: spacing.sm},
 });

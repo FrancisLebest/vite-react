@@ -6,8 +6,11 @@ Single source of truth shared by `backend/` and `mobile/`. Any change must be re
 
 - Base URL: `${API_URL}/api/v1` (dev: `http://localhost:4000/api/v1`; Android emulator: `http://10.0.2.2:4000/api/v1`).
 - JSON everywhere except uploads (`multipart/form-data`).
-- Auth: `Authorization: Bearer <accessToken>` (JWT, 15 min). Refresh token: opaque, 30 days, rotated on every refresh, stored hashed server-side.
+- Auth: `Authorization: Bearer <accessToken>` (JWT, 15 min). Refresh token: opaque, 30 days, rotated on every refresh, stored hashed server-side. Reusing an already-rotated refresh token revokes all of the user's refresh tokens.
+- Every endpoint requires a Bearer token **except**: `POST /auth/register|login|refresh|logout|forgot-password|reset-password`, `GET /categories`, `GET /universities`, `GET /health`, `GET /uploads/*`.
 - Errors: HTTP status + `{ "error": { "code": "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "RATE_LIMITED" | "INTERNAL", "message": string, "details"?: any } }`.
+  - `VALIDATION_ERROR` (400, or 413 for files/bodies too large): `details` = `[{ path: string, message: string, code: string }]` for field errors.
+  - `CONFLICT` on register / username change: `details` = `{ field: 'email' | 'username' }`; on community name: `{ field: 'name' }`.
 - Pagination (cursor): query `?cursor=<opaque>&limit=<1..50, default 20>` → `{ "items": T[], "nextCursor": string | null }`.
 - Dates: ISO 8601 strings. IDs: strings (cuid/uuid).
 - Media URLs are absolute (`PUBLIC_URL` + `/uploads/...`).
@@ -88,8 +91,8 @@ Category = { id: CategoryId, label: string, icon: string /* Ionicons */ }
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/feed?tab=forYou\|following&type=video\|post&sort=latest\|popular&category=&cursor` | `forYou` = ranked (recency + engagement), excludes blocked users |
-| POST | `/posts` | multipart: `type`, `text`, `category`, `communityId?`, `media?` (video ≤ 100 MB mp4/mov, image ≤ 10 MB, audio ≤ 20 MB). `type=video` requires a video file. Server extracts `#hashtags` and `@mentions` (→ notifications), generates video thumbnail + duration with ffmpeg → `201 Post` |
+| GET | `/feed?tab=forYou\|following&type=video\|post&sort=latest\|popular&category=&cursor` | `forYou` = ranked (recency + engagement), excludes blocked users. Without `sort`: `forYou` is ranked, `following` is latest-first |
+| POST | `/posts` | multipart: `type`, `text`, `category`, `communityId?`, `media?` (video ≤ 100 MB mp4/mov, image ≤ 10 MB, audio ≤ 20 MB). `type=video` requires a video file. Server extracts `#hashtags` and `@mentions` (→ notifications), generates video thumbnail + duration with ffmpeg → `201 Post`. Text-only posts may also be sent as JSON. `category` defaults to `other`. `type=post` needs `text` or `media`. Posting with `communityId` requires membership (else 403) |
 | GET | `/posts/:id` | `Post` |
 | DELETE | `/posts/:id` | author only → `204` |
 | POST / DELETE | `/posts/:id/like` | → `{ liked, likeCount }` |
@@ -129,8 +132,8 @@ Category = { id: CategoryId, label: string, icon: string /* Ionicons */ }
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/conversations?cursor` | page of `Conversation`, most recent first |
-| POST | `/conversations` | `{ userId }` → get-or-create DM; or `{ title, memberIds[] }` → group. → `Conversation` |
+| GET | `/conversations?cursor` | page of `Conversation`, most recent first (DMs without any message yet are omitted) |
+| POST | `/conversations` | `{ userId }` → get-or-create DM; or `{ title, memberIds[] }` → group. → `Conversation` (`201` when created, `200` when the DM already existed). `403` if a block exists |
 | GET | `/conversations/:id` | `Conversation` (participants only) |
 | PATCH | `/conversations/:id` | `{ muted?: boolean, title?: string }` |
 | GET | `/conversations/:id/messages?cursor` | page of `Message`, **newest first** |
@@ -150,7 +153,7 @@ Category = { id: CategoryId, label: string, icon: string /* Ionicons */ }
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/reports` | `{ targetType: 'post'\|'comment'\|'user'\|'community'\|'message', targetId, reason: 'spam'\|'harassment'\|'inappropriate'\|'other', details? }` → `201` |
+| POST | `/reports` | `{ targetType: 'post'\|'comment'\|'user'\|'community'\|'message', targetId, reason: 'spam'\|'harassment'\|'inappropriate'\|'other', details? }` → `201 { id, status: 'open', createdAt }` (404 if the target does not exist) |
 
 ## Realtime (Socket.IO, same host/port, path `/socket.io`)
 
@@ -162,3 +165,14 @@ Category = { id: CategoryId, label: string, icon: string /* Ionicons */ }
   - `notification:new` `{ notification: Notification }`
   - `typing` `{ conversationId, user: UserSummary }`
 - Client → server: `typing` `{ conversationId }`.
+
+## Implementation notes (backend)
+
+- `Conversation.participants` lists the **other** participants (the viewer is excluded). For DMs, `title`/`avatarUrl` are the other user's name/avatar.
+- `User.mutualCount` = number of users the viewer follows who also follow this user (0 for yourself).
+- `Media.thumbnailUrl` is the generated JPEG for videos, the image URL itself for images, `null` for audio. Videos are remuxed to MP4 (faststart) when possible, never transcoded.
+- Blocks: if the target blocked the viewer, `GET /users/:id` and that user's posts return `404`; the blocker still sees the profile with `isBlocked: true` (and an empty post list) so they can unblock. Blocking removes follows in both directions.
+- `POST /communities` defaults: `icon = 'people-outline'`, `color = '#6C5CE7'`, `description = ''`. Owner leaving → `403`.
+- Unliking / unfollowing / leaving removes the corresponding notification; deleting a comment or post removes notifications attached to it.
+- Ranked lists (`forYou`, `sort=popular`, search, directory `sort=popular`) use opaque offset cursors (max offset 10 000); chronological lists use keyset cursors.
+- `GET /universities` is public (sign-up screen) and returns at most 50 names.
