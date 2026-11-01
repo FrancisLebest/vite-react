@@ -145,7 +145,11 @@ function Tabs() {
         name="Inbox"
         component={InboxScreen}
         options={{
-          tabBarBadge: inboxBadge ? (inboxBadge > 99 ? '99+' : inboxBadge) : undefined,
+          tabBarBadge: inboxBadge
+            ? inboxBadge > 99
+              ? '99+'
+              : inboxBadge
+            : undefined,
           tabBarBadgeStyle: styles.tabBadge,
         }}
       />
@@ -157,18 +161,33 @@ function Tabs() {
 const modalOptions = {
   presentation: Platform.OS === 'ios' ? ('modal' as const) : ('card' as const),
   animation:
-    Platform.OS === 'ios' ? ('default' as const) : ('slide_from_bottom' as const),
+    Platform.OS === 'ios'
+      ? ('default' as const)
+      : ('slide_from_bottom' as const),
 };
 
-function SplashScreen({error, onRetry}: {error?: string | null; onRetry: () => void}) {
+function SplashScreen({
+  error,
+  onRetry,
+}: {
+  error?: string | null;
+  onRetry: () => void;
+}) {
   return (
     <View style={styles.splash}>
       <Logo size={64} />
       <Text style={styles.brand}>StudyHub</Text>
       {error ? (
-        <ErrorState title="Can't reach StudyHub" message={error} onRetry={onRetry} />
+        <ErrorState
+          title="Can't reach StudyHub"
+          message={error}
+          onRetry={onRetry}
+        />
       ) : (
-        <LoadingState label="Restoring your session" style={styles.splashLoader} />
+        <LoadingState
+          label="Restoring your session"
+          style={styles.splashLoader}
+        />
       )}
     </View>
   );
@@ -212,7 +231,10 @@ export default function RootNavigator() {
         <Stack.Screen name="Posts" component={PostsScreen} />
         <Stack.Screen name="Users" component={UsersScreen} />
         <Stack.Screen name="Communities" component={CommunitiesScreen} />
-        <Stack.Screen name="CommunityDetail" component={CommunityDetailScreen} />
+        <Stack.Screen
+          name="CommunityDetail"
+          component={CommunityDetailScreen}
+        />
         <Stack.Screen name="UserProfile" component={UserProfileScreen} />
         <Stack.Screen name="ContentDetail" component={ContentDetailScreen} />
         <Stack.Screen name="Chat" component={ChatScreen} />
@@ -229,7 +251,10 @@ export default function RootNavigator() {
             component={CreateVideoScreen}
             options={{gestureEnabled: false}}
           />
-          <Stack.Screen name="CreateCommunity" component={CreateCommunityScreen} />
+          <Stack.Screen
+            name="CreateCommunity"
+            component={CreateCommunityScreen}
+          />
           <Stack.Screen name="NewMessage" component={NewMessageScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         </Stack.Group>

@@ -36,7 +36,10 @@ import {timeAgo} from '../utils/time';
 
 const MAX = 1000;
 
-export default function CommentsScreen({route, navigation}: RootScreenProps<'Comments'>) {
+export default function CommentsScreen({
+  route,
+  navigation,
+}: RootScreenProps<'Comments'>) {
   const {postId} = route.params;
   const {me} = useAuth();
   const qc = useQueryClient();
@@ -51,19 +54,25 @@ export default function CommentsScreen({route, navigation}: RootScreenProps<'Com
   const add = useMutation({
     mutationFn: (value: string) => api.posts.addComment(postId, value),
     onSuccess: c => {
-      qc.setQueryData<InfiniteData<Page<Comment>>>(qk.comments(postId), data => {
-        if (!data || !data.pages.length) {
-          return data;
-        }
-        const pages = [...data.pages];
-        const last = pages.length - 1;
-        // Oldest-first list: only append when the last page is loaded.
-        if (!pages[last].nextCursor) {
-          pages[last] = {...pages[last], items: [...pages[last].items, c]};
-        }
-        return {...data, pages};
-      });
-      patchEntities(qc, isPost(postId), o => ({...o, commentCount: (o.commentCount as number) + 1}));
+      qc.setQueryData<InfiniteData<Page<Comment>>>(
+        qk.comments(postId),
+        data => {
+          if (!data || !data.pages.length) {
+            return data;
+          }
+          const pages = [...data.pages];
+          const last = pages.length - 1;
+          // Oldest-first list: only append when the last page is loaded.
+          if (!pages[last].nextCursor) {
+            pages[last] = {...pages[last], items: [...pages[last].items, c]};
+          }
+          return {...data, pages};
+        },
+      );
+      patchEntities(qc, isPost(postId), o => ({
+        ...o,
+        commentCount: (o.commentCount as number) + 1,
+      }));
       setText('');
       setTimeout(() => listRef.current?.scrollToEnd({animated: true}), 200);
     },
@@ -102,7 +111,13 @@ export default function CommentsScreen({route, navigation}: RootScreenProps<'Com
                 icon: 'trash-outline',
                 destructive: true,
                 onPress: async () => {
-                  if (await confirmDestructive('Delete comment?', 'This cannot be undone.', 'Delete')) {
+                  if (
+                    await confirmDestructive(
+                      'Delete comment?',
+                      'This cannot be undone.',
+                      'Delete',
+                    )
+                  ) {
                     remove.mutate(c.id);
                   }
                 },
@@ -158,14 +173,21 @@ export default function CommentsScreen({route, navigation}: RootScreenProps<'Com
               accessibilityHint="Long press for options"
               style={styles.comment}>
               <Pressable
-                onPress={() => navigation.navigate('UserProfile', {userId: item.author.id})}
+                onPress={() =>
+                  navigation.navigate('UserProfile', {userId: item.author.id})
+                }
                 accessibilityRole="button"
                 accessibilityLabel={`Open ${item.author.name}'s profile`}>
-                <Avatar uri={item.author.avatarUrl} name={item.author.name} size={36} />
+                <Avatar
+                  uri={item.author.avatarUrl}
+                  name={item.author.name}
+                  size={36}
+                />
               </Pressable>
               <View style={styles.body}>
                 <Text style={styles.name}>
-                  {item.author.name} <Text style={styles.time}>· {timeAgo(item.createdAt)}</Text>
+                  {item.author.name}{' '}
+                  <Text style={styles.time}>· {timeAgo(item.createdAt)}</Text>
                 </Text>
                 <Text style={styles.text}>{item.text}</Text>
               </View>
@@ -178,18 +200,31 @@ export default function CommentsScreen({route, navigation}: RootScreenProps<'Com
               />
             </Pressable>
           )}
-          ListFooterComponent={<ListFooter loading={comments.isFetchingNextPage} />}
+          ListFooterComponent={
+            <ListFooter loading={comments.isFetchingNextPage} />
+          }
           ListEmptyComponent={
             comments.isLoading ? (
               <LoadingState />
             ) : comments.isError ? (
-              <ErrorState message={errorMessage(comments.error)} onRetry={() => comments.refetch()} />
+              <ErrorState
+                message={errorMessage(comments.error)}
+                onRetry={() => comments.refetch()}
+              />
             ) : (
-              <EmptyState icon="chatbubbles-outline" title="No comments yet" message="Be the first to comment." />
+              <EmptyState
+                icon="chatbubbles-outline"
+                title="No comments yet"
+                message="Be the first to comment."
+              />
             )
           }
         />
-        <View style={[styles.composer, {paddingBottom: Math.max(insets.bottom, spacing.sm)}]}>
+        <View
+          style={[
+            styles.composer,
+            {paddingBottom: Math.max(insets.bottom, spacing.sm)},
+          ]}>
           <Avatar uri={me?.avatarUrl} name={me?.name} size={36} />
           <TextInput
             value={text}
@@ -208,7 +243,10 @@ export default function CommentsScreen({route, navigation}: RootScreenProps<'Com
             disabled={!text.trim() || add.isLoading}
             accessibilityRole="button"
             accessibilityLabel="Post comment"
-            style={[styles.send, (!text.trim() || add.isLoading) && styles.disabled]}>
+            style={[
+              styles.send,
+              (!text.trim() || add.isLoading) && styles.disabled,
+            ]}>
             <Icon name="arrow-up" size={18} color={colors.white} />
           </Pressable>
         </View>
@@ -226,7 +264,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  handle: {width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.sm},
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    marginBottom: spacing.sm,
+  },
   title: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
   close: {position: 'absolute', right: spacing.md, top: spacing.md},
   list: {padding: spacing.lg, flexGrow: 1},

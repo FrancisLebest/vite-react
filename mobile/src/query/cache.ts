@@ -80,14 +80,21 @@ export function restore(qc: QueryClient, snapshot: Snapshot | undefined) {
   snapshot?.forEach(([key, data]) => qc.setQueryData(key, data));
 }
 
-export const isPost = (id: string) => (o: Obj) => o.id === id && 'likedByMe' in o;
-export const isUser = (id: string) => (o: Obj) => o.id === id && 'isFollowing' in o;
-export const isCommunity = (id: string) => (o: Obj) => o.id === id && 'isMember' in o;
+export const isPost = (id: string) => (o: Obj) =>
+  o.id === id && 'likedByMe' in o;
+export const isUser = (id: string) => (o: Obj) =>
+  o.id === id && 'isFollowing' in o;
+export const isCommunity = (id: string) => (o: Obj) =>
+  o.id === id && 'isMember' in o;
 export const isConversation = (id: string) => (o: Obj) =>
   o.id === id && 'unreadCount' in o && 'participants' in o;
 
 /** Remove an entity (by id) from every paginated list in the cache. */
-export function removeFromPages(qc: QueryClient, prefix: QueryKey[] | null, id: string) {
+export function removeFromPages(
+  qc: QueryClient,
+  prefix: QueryKey[] | null,
+  id: string,
+) {
   qc.getQueryCache()
     .getAll()
     .forEach(q => {
@@ -105,7 +112,10 @@ export function removeFromPages(qc: QueryClient, prefix: QueryKey[] | null, id: 
       if (found) {
         qc.setQueryData(q.queryKey, {
           ...data,
-          pages: data.pages.map(p => ({...p, items: p.items.filter(i => i.id !== id)})),
+          pages: data.pages.map(p => ({
+            ...p,
+            items: p.items.filter(i => i.id !== id),
+          })),
         });
       }
     });
@@ -121,7 +131,10 @@ export function prependToPages<T extends {id: string}>(
     if (!data || !data.pages.length) {
       return data;
     }
-    const pages = data.pages.map(p => ({...p, items: p.items.filter(i => i.id !== item.id)}));
+    const pages = data.pages.map(p => ({
+      ...p,
+      items: p.items.filter(i => i.id !== item.id),
+    }));
     pages[0] = {...pages[0], items: [item, ...pages[0].items]};
     return {...data, pages};
   });

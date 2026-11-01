@@ -68,7 +68,8 @@ export function usePostOptions() {
             {
               label: `View @${post.author.username}`,
               icon: 'person-outline',
-              onPress: () => navigation.navigate('UserProfile', {userId: post.author.id}),
+              onPress: () =>
+                navigation.navigate('UserProfile', {userId: post.author.id}),
             },
             {
               label: 'Report',
@@ -89,7 +90,10 @@ export function ContentRow({item}: {item: Post}) {
   const navigation = useNavigation();
   const bookmark = useToggleBookmark();
   const saved = item.bookmarkedByMe;
-  const thumb = mediaUrl(item.media?.thumbnailUrl ?? (item.media?.kind === 'image' ? item.media.url : null));
+  const thumb = mediaUrl(
+    item.media?.thumbnailUrl ??
+      (item.media?.kind === 'image' ? item.media.url : null),
+  );
   const title = item.text || categoryLabel(item.category);
   return (
     <Pressable
@@ -111,7 +115,9 @@ export function ContentRow({item}: {item: Post}) {
         )}
         {item.media?.durationSec ? (
           <View style={styles.duration}>
-            <Text style={styles.durationText}>{duration(item.media.durationSec)}</Text>
+            <Text style={styles.durationText}>
+              {duration(item.media.durationSec)}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -120,7 +126,11 @@ export function ContentRow({item}: {item: Post}) {
           {title}
         </Text>
         <View style={styles.metaRow}>
-          <Avatar uri={item.author.avatarUrl} name={item.author.name} size={20} />
+          <Avatar
+            uri={item.author.avatarUrl}
+            name={item.author.name}
+            size={20}
+          />
           <Text style={styles.meta} numberOfLines={1}>
             {item.author.name} · {formatCount(item.viewCount)} views
           </Text>
@@ -144,7 +154,8 @@ export function ContentRow({item}: {item: Post}) {
 export function GridTile({post, size}: {post: Post; size: number}) {
   const navigation = useNavigation();
   const thumb = mediaUrl(
-    post.media?.thumbnailUrl ?? (post.media?.kind === 'image' ? post.media.url : null),
+    post.media?.thumbnailUrl ??
+      (post.media?.kind === 'image' ? post.media.url : null),
   );
   return (
     <Pressable
@@ -191,7 +202,9 @@ export function UserRow({
   const isMe = user.id === me?.id;
   return (
     <Pressable
-      onPress={onPress ?? (() => navigation.navigate('UserProfile', {userId: user.id}))}
+      onPress={
+        onPress ?? (() => navigation.navigate('UserProfile', {userId: user.id}))
+      }
       accessibilityRole="button"
       accessibilityLabel={user.name}
       style={({pressed}) => [styles.row, pressed && styles.pressed]}>
@@ -208,14 +221,19 @@ export function UserRow({
         </Text>
         <Text style={styles.subMuted} numberOfLines={1}>
           {full && !compact
-            ? `${formatCount(full.followerCount)} Followers · ${full.mutualCount} Mutual`
+            ? `${formatCount(full.followerCount)} Followers · ${
+                full.mutualCount
+              } Mutual`
             : user.university ?? roleLabel(user.role)}
         </Text>
       </View>
       {right !== undefined ? (
         right
       ) : isMe ? null : (
-        <FollowButton following={user.isFollowing} onPress={() => follow.mutate(user)} />
+        <FollowButton
+          following={user.isFollowing}
+          onPress={() => follow.mutate(user)}
+        />
       )}
     </Pressable>
   );
@@ -241,7 +259,9 @@ export function CommunityRow({
   const join = useToggleJoin();
   return (
     <Pressable
-      onPress={() => navigation.navigate('CommunityDetail', {communityId: community.id})}
+      onPress={() =>
+        navigation.navigate('CommunityDetail', {communityId: community.id})
+      }
       accessibilityRole="button"
       accessibilityLabel={community.name}
       style={({pressed}) => [styles.row, pressed && styles.pressed]}>
@@ -250,37 +270,72 @@ export function CommunityRow({
         <Text style={styles.name} numberOfLines={1}>
           {community.name}
         </Text>
-        <Text style={styles.sub}>{formatCount(community.memberCount)} Members</Text>
+        <Text style={styles.sub}>
+          {formatCount(community.memberCount)} Members
+        </Text>
       </View>
       {joinable && !community.isOwner ? (
-        <JoinButton joined={community.isMember} onPress={() => join.mutate(community)} />
+        <JoinButton
+          joined={community.isMember}
+          onPress={() => join.mutate(community)}
+        />
       ) : null}
       {showChevron ? (
-        <Icon name="chevron-forward" size={18} color={colors.text} style={styles.chevron} />
+        <Icon
+          name="chevron-forward"
+          size={18}
+          color={colors.text}
+          style={styles.chevron}
+        />
       ) : null}
     </Pressable>
   );
 }
 
-export function CommunityAvatar({community, size}: {community: Community; size: number}) {
+export function CommunityAvatar({
+  community,
+  size,
+}: {
+  community: Community;
+  size: number;
+}) {
   const uri = mediaUrl(community.avatarUrl);
   if (uri) {
     return (
       <Image
         source={{uri}}
-        style={{width: size, height: size, borderRadius: size / 2, backgroundColor: colors.primarySoft}}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: colors.primarySoft,
+        }}
       />
     );
   }
-  return <IconAvatar name={community.icon || 'people'} color={community.color} size={size} />;
+  return (
+    <IconAvatar
+      name={community.icon || 'people'}
+      color={community.color}
+      size={size}
+    />
+  );
 }
 
-export function CommunityCard({community, width}: {community: Community; width: number}) {
+export function CommunityCard({
+  community,
+  width,
+}: {
+  community: Community;
+  width: number;
+}) {
   const navigation = useNavigation();
   const join = useToggleJoin();
   return (
     <Pressable
-      onPress={() => navigation.navigate('CommunityDetail', {communityId: community.id})}
+      onPress={() =>
+        navigation.navigate('CommunityDetail', {communityId: community.id})
+      }
       accessibilityRole="button"
       accessibilityLabel={community.name}
       style={[styles.card, {width}]}>
@@ -288,11 +343,16 @@ export function CommunityCard({community, width}: {community: Community; width: 
       <Text style={styles.cardTitle} numberOfLines={2}>
         {community.name}
       </Text>
-      <Text style={styles.cardSub}>{formatCount(community.memberCount)} Members</Text>
+      <Text style={styles.cardSub}>
+        {formatCount(community.memberCount)} Members
+      </Text>
       {community.isOwner ? (
         <Text style={styles.owner}>Owner</Text>
       ) : (
-        <JoinButton joined={community.isMember} onPress={() => join.mutate(community)} />
+        <JoinButton
+          joined={community.isMember}
+          onPress={() => join.mutate(community)}
+        />
       )}
     </Pressable>
   );
@@ -302,15 +362,25 @@ export function CommunityCard({community, width}: {community: Community; width: 
 /* Post card                                                           */
 /* ------------------------------------------------------------------ */
 
-export function PostCard({post, onDeleted}: {post: Post; onDeleted?: () => void}) {
+export function PostCard({
+  post,
+  onDeleted,
+}: {
+  post: Post;
+  onDeleted?: () => void;
+}) {
   const navigation = useNavigation();
   const like = useToggleLike();
   const bookmark = useToggleBookmark();
   const share = useSharePost();
   const options = usePostOptions();
   const author = post.author;
-  const image = post.media?.kind === 'image' ? mediaUrl(post.media.url) : undefined;
-  const videoThumb = post.media?.kind === 'video' ? mediaUrl(post.media.thumbnailUrl) : undefined;
+  const image =
+    post.media?.kind === 'image' ? mediaUrl(post.media.url) : undefined;
+  const videoThumb =
+    post.media?.kind === 'video'
+      ? mediaUrl(post.media.thumbnailUrl)
+      : undefined;
 
   return (
     <View style={styles.post}>
@@ -319,7 +389,9 @@ export function PostCard({post, onDeleted}: {post: Post; onDeleted?: () => void}
           style={styles.postAuthor}
           accessibilityRole="button"
           accessibilityLabel={`Open ${author.name}'s profile`}
-          onPress={() => navigation.navigate('UserProfile', {userId: author.id})}>
+          onPress={() =>
+            navigation.navigate('UserProfile', {userId: author.id})
+          }>
           <Avatar uri={author.avatarUrl} name={author.name} size={42} />
           <View style={styles.rowBody}>
             <View style={styles.nameRow}>
@@ -329,7 +401,11 @@ export function PostCard({post, onDeleted}: {post: Post; onDeleted?: () => void}
               {author.verified ? <VerifiedBadge /> : null}
             </View>
             <Text style={styles.subMuted} numberOfLines={1}>
-              {[author.university, post.community?.name, timeAgo(post.createdAt)]
+              {[
+                author.university,
+                post.community?.name,
+                timeAgo(post.createdAt),
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </Text>
@@ -343,16 +419,24 @@ export function PostCard({post, onDeleted}: {post: Post; onDeleted?: () => void}
         />
       </View>
 
-      <Pressable onPress={() => navigation.navigate('ContentDetail', {postId: post.id})}>
+      <Pressable
+        onPress={() => navigation.navigate('ContentDetail', {postId: post.id})}>
         {post.text ? <Text style={styles.postText}>{post.text}</Text> : null}
         {post.hashtags.length ? (
-          <Text style={styles.postTags}>{post.hashtags.map(h => `#${h}`).join(' ')}</Text>
+          <Text style={styles.postTags}>
+            {post.hashtags.map(h => `#${h}`).join(' ')}
+          </Text>
         ) : null}
-        {image ? <Image source={{uri: image}} style={styles.postImage} /> : null}
+        {image ? (
+          <Image source={{uri: image}} style={styles.postImage} />
+        ) : null}
         {post.media?.kind === 'video' ? (
           <View style={styles.postImage}>
             {videoThumb ? (
-              <Image source={{uri: videoThumb}} style={[StyleSheet.absoluteFill, styles.radius]} />
+              <Image
+                source={{uri: videoThumb}}
+                style={[StyleSheet.absoluteFill, styles.radius]}
+              />
             ) : null}
             <View style={styles.playOverlay}>
               <Icon name="play" size={28} color={colors.white} />
@@ -361,7 +445,10 @@ export function PostCard({post, onDeleted}: {post: Post; onDeleted?: () => void}
         ) : null}
       </Pressable>
       {post.media?.kind === 'audio' ? (
-        <AudioPlayer uri={post.media.url} durationSec={post.media.durationSec} />
+        <AudioPlayer
+          uri={post.media.url}
+          durationSec={post.media.durationSec}
+        />
       ) : null}
 
       <View style={styles.actions}>
@@ -401,9 +488,17 @@ export function PostCard({post, onDeleted}: {post: Post; onDeleted?: () => void}
 /* Audio (voice note) player                                           */
 /* ------------------------------------------------------------------ */
 
-const BARS = [6, 12, 18, 10, 22, 14, 8, 16, 24, 12, 6, 14, 20, 10, 16, 8, 12, 18, 6, 10];
+const BARS = [
+  6, 12, 18, 10, 22, 14, 8, 16, 24, 12, 6, 14, 20, 10, 16, 8, 12, 18, 6, 10,
+];
 
-export function AudioPlayer({uri, durationSec}: {uri: string; durationSec: number | null}) {
+export function AudioPlayer({
+  uri,
+  durationSec,
+}: {
+  uri: string;
+  durationSec: number | null;
+}) {
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [total, setTotal] = useState(durationSec ?? 0);
@@ -417,7 +512,11 @@ export function AudioPlayer({uri, durationSec}: {uri: string; durationSec: numbe
           onPress={() => setPlaying(p => !p)}
           accessibilityRole="button"
           accessibilityLabel={playing ? 'Pause voice note' : 'Play voice note'}>
-          <Icon name={playing ? 'pause' : 'play'} size={16} color={colors.white} />
+          <Icon
+            name={playing ? 'pause' : 'play'}
+            size={16}
+            color={colors.white}
+          />
         </Pressable>
         <View style={styles.wave}>
           {BARS.map((h, i) => (
@@ -431,7 +530,9 @@ export function AudioPlayer({uri, durationSec}: {uri: string; durationSec: numbe
             />
           ))}
         </View>
-        <Text style={styles.audioTime}>{duration(playing ? position : total) || '0:00'}</Text>
+        <Text style={styles.audioTime}>
+          {duration(playing ? position : total) || '0:00'}
+        </Text>
       </View>
       {playing && src ? (
         <Video
@@ -512,11 +613,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 1,
   },
-  durationText: {color: colors.white, fontSize: 10, fontWeight: weight.semibold},
+  durationText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: weight.semibold,
+  },
   contentBody: {flex: 1, marginLeft: spacing.md},
-  contentTitle: {fontSize: font.md, fontWeight: weight.semibold, color: colors.text},
+  contentTitle: {
+    fontSize: font.md,
+    fontWeight: weight.semibold,
+    color: colors.text,
+  },
   metaRow: {flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm},
-  meta: {fontSize: font.xs, color: colors.textSecondary, marginLeft: 6, flexShrink: 1},
+  meta: {
+    fontSize: font.xs,
+    color: colors.textSecondary,
+    marginLeft: 6,
+    flexShrink: 1,
+  },
   tile: {
     backgroundColor: colors.primarySoft,
     borderWidth: StyleSheet.hairlineWidth,
@@ -576,7 +690,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     minHeight: font.sm * 2.6,
   },
-  cardSub: {fontSize: font.xs, color: colors.textSecondary, marginVertical: spacing.sm},
+  cardSub: {
+    fontSize: font.xs,
+    color: colors.textSecondary,
+    marginVertical: spacing.sm,
+  },
   owner: {
     fontSize: font.sm,
     color: colors.primary,
@@ -591,7 +709,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 6,
     borderBottomColor: colors.surface,
   },
-  postHeader: {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg},
+  postHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
   postAuthor: {flex: 1, flexDirection: 'row', alignItems: 'center'},
   postText: {
     fontSize: font.md,
@@ -640,7 +762,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wave: {flex: 1, flexDirection: 'row', alignItems: 'center', marginHorizontal: spacing.sm},
+  wave: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.sm,
+  },
   bar: {
     flex: 1,
     marginHorizontal: 1,
@@ -648,7 +775,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#CFC6F3',
   },
   barPlayed: {backgroundColor: colors.primaryLight},
-  audioTime: {fontSize: font.xs, color: colors.textSecondary, marginRight: spacing.xs},
+  audioTime: {
+    fontSize: font.xs,
+    color: colors.textSecondary,
+    marginRight: spacing.xs,
+  },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',

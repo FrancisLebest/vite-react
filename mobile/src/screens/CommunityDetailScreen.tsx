@@ -1,5 +1,12 @@
 import React, {useState} from 'react';
-import {Alert, FlatList, RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useQueryClient} from '@tanstack/react-query';
 import {api, errorMessage} from '../api';
@@ -94,9 +101,15 @@ export default function CommunityDetailScreen({
             {
               label: 'Edit community',
               icon: 'create-outline',
-              onPress: () => navigation.navigate('CreateCommunity', {communityId: c.id}),
+              onPress: () =>
+                navigation.navigate('CreateCommunity', {communityId: c.id}),
             },
-            {label: 'Delete community', icon: 'trash-outline', destructive: true, onPress: remove},
+            {
+              label: 'Delete community',
+              icon: 'trash-outline',
+              destructive: true,
+              onPress: remove,
+            },
           ]
         : [
             {
@@ -120,11 +133,14 @@ export default function CommunityDetailScreen({
         </View>
         <Text style={styles.title}>{c.name}</Text>
         <Text style={styles.members}>
-          {formatCount(c.memberCount)} Members · {formatCount(c.postCount)} Posts
+          {formatCount(c.memberCount)} Members · {formatCount(c.postCount)}{' '}
+          Posts
         </Text>
       </LinearGradient>
 
-      {c.description ? <Text style={styles.description}>{c.description}</Text> : null}
+      {c.description ? (
+        <Text style={styles.description}>{c.description}</Text>
+      ) : null}
 
       <View style={styles.actions}>
         {c.isOwner ? (
@@ -133,7 +149,9 @@ export default function CommunityDetailScreen({
             icon="create-outline"
             variant="soft"
             style={styles.flex}
-            onPress={() => navigation.navigate('CreateCommunity', {communityId: c.id})}
+            onPress={() =>
+              navigation.navigate('CreateCommunity', {communityId: c.id})
+            }
           />
         ) : (
           <PillButton
@@ -141,7 +159,9 @@ export default function CommunityDetailScreen({
             icon={c.isMember ? 'checkmark' : 'add'}
             variant={c.isMember ? 'soft' : 'solid'}
             style={styles.flex}
-            accessibilityLabel={c.isMember ? 'Leave community' : 'Join community'}
+            accessibilityLabel={
+              c.isMember ? 'Leave community' : 'Join community'
+            }
             onPress={() => join.mutate(c)}
           />
         )}
@@ -151,7 +171,9 @@ export default function CommunityDetailScreen({
             icon="create-outline"
             variant="outline"
             style={styles.post}
-            onPress={() => navigation.navigate('CreatePost', {communityId: c.id})}
+            onPress={() =>
+              navigation.navigate('CreatePost', {communityId: c.id})
+            }
           />
         ) : null}
       </View>
@@ -174,13 +196,23 @@ export default function CommunityDetailScreen({
     <Screen>
       <BackHeader
         title={c.name}
-        right={<IconButton name="ellipsis-horizontal" label="Community options" onPress={openOptions} />}
+        right={
+          <IconButton
+            name="ellipsis-horizontal"
+            label="Community options"
+            onPress={openOptions}
+          />
+        }
       />
       <FlatList<Post | UserSummary>
         data={list.items as (Post | UserSummary)[]}
         keyExtractor={i => i.id}
         renderItem={({item}) =>
-          tab === 'posts' ? <PostCard post={item as Post} /> : <UserRow user={item as UserSummary} compact />
+          tab === 'posts' ? (
+            <PostCard post={item as Post} />
+          ) : (
+            <UserRow user={item as UserSummary} compact />
+          )
         }
         ListHeaderComponent={header}
         onEndReached={list.loadMore}
@@ -202,17 +234,25 @@ export default function CommunityDetailScreen({
           list.isLoading ? (
             <LoadingState />
           ) : list.isError ? (
-            <ErrorState message={errorMessage(list.error)} onRetry={() => list.refetch()} />
+            <ErrorState
+              message={errorMessage(list.error)}
+              onRetry={() => list.refetch()}
+            />
           ) : tab === 'posts' ? (
             <EmptyState
               icon="chatbubbles-outline"
               title="No discussions yet"
-              message={c.isMember ? 'Start the first one!' : 'Join to start a discussion.'}
+              message={
+                c.isMember
+                  ? 'Start the first one!'
+                  : 'Join to start a discussion.'
+              }
               action={
                 c.isMember
                   ? {
                       label: 'Create a post',
-                      onPress: () => navigation.navigate('CreatePost', {communityId: c.id}),
+                      onPress: () =>
+                        navigation.navigate('CreatePost', {communityId: c.id}),
                     }
                   : undefined
               }
@@ -257,7 +297,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
-  actions: {flexDirection: 'row', paddingHorizontal: spacing.lg, marginTop: spacing.lg},
+  actions: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+  },
   post: {marginLeft: spacing.md},
   tabs: {marginTop: spacing.lg, paddingBottom: spacing.sm},
 });

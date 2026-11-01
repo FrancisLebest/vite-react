@@ -7,12 +7,17 @@ import type {RootScreenProps} from '../../navigation/types';
 import {MAX_CONTENT_WIDTH, colors, font, spacing, weight} from '../../theme';
 
 const POINTS = [
-  {icon: 'play-circle-outline', text: 'Short study videos from students & professors'},
+  {
+    icon: 'play-circle-outline',
+    text: 'Short study videos from students & professors',
+  },
   {icon: 'people-outline', text: 'Join your university and topic communities'},
   {icon: 'chatbubbles-outline', text: 'Chat, ask questions, share notes'},
 ];
 
-export default function WelcomeScreen({navigation}: RootScreenProps<'Welcome'>) {
+export default function WelcomeScreen({
+  navigation,
+}: RootScreenProps<'Welcome'>) {
   return (
     <LinearGradient
       colors={[colors.primaryLight, colors.primary, colors.primaryDark]}
@@ -78,8 +83,17 @@ const styles = StyleSheet.create({
     fontWeight: weight.bold,
     marginTop: spacing.lg,
   },
-  tagline: {color: 'rgba(255,255,255,0.85)', fontSize: font.lg, marginTop: spacing.xs},
+  tagline: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: font.lg,
+    marginTop: spacing.xs,
+  },
   point: {flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg},
-  pointText: {color: colors.white, fontSize: font.md, marginLeft: spacing.md, flex: 1},
+  pointText: {
+    color: colors.white,
+    fontSize: font.md,
+    marginLeft: spacing.md,
+    flex: 1,
+  },
   second: {marginTop: spacing.md},
 });

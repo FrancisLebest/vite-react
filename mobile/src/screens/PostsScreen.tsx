@@ -1,5 +1,11 @@
 import React, {useState} from 'react';
-import {FlatList, Pressable, RefreshControl, StyleSheet, Text} from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+} from 'react-native';
 import {errorMessage} from '../api';
 import type {FeedParams} from '../api/types';
 import {useAuth} from '../auth/AuthContext';
@@ -91,7 +97,12 @@ export default function PostsScreen({navigation}: RootScreenProps<'Posts'>) {
             <Avatar uri={me?.avatarUrl} name={me?.name} size={40} />
             <Text style={styles.composerText}>Share something...</Text>
             <Icon name="image-outline" size={22} color={colors.primary} />
-            <Icon name="pencil" size={20} color={colors.primary} style={styles.ml} />
+            <Icon
+              name="pencil"
+              size={20}
+              color={colors.primary}
+              style={styles.ml}
+            />
           </Pressable>
         }
         ListFooterComponent={
@@ -105,7 +116,10 @@ export default function PostsScreen({navigation}: RootScreenProps<'Posts'>) {
           list.isLoading ? (
             <LoadingState />
           ) : list.isError ? (
-            <ErrorState message={errorMessage(list.error)} onRetry={() => list.refetch()} />
+            <ErrorState
+              message={errorMessage(list.error)}
+              onRetry={() => list.refetch()}
+            />
           ) : (
             <EmptyState
               icon="newspaper-outline"
@@ -117,8 +131,14 @@ export default function PostsScreen({navigation}: RootScreenProps<'Posts'>) {
               }
               action={
                 feed === 'following'
-                  ? {label: 'Find people', onPress: () => navigation.navigate('Users')}
-                  : {label: 'Create a post', onPress: () => navigation.navigate('CreatePost')}
+                  ? {
+                      label: 'Find people',
+                      onPress: () => navigation.navigate('Users'),
+                    }
+                  : {
+                      label: 'Create a post',
+                      onPress: () => navigation.navigate('CreatePost'),
+                    }
               }
             />
           )
@@ -143,5 +163,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  composerText: {flex: 1, marginLeft: spacing.md, color: colors.textMuted, fontSize: font.md},
+  composerText: {
+    flex: 1,
+    marginLeft: spacing.md,
+    color: colors.textMuted,
+    fontSize: font.md,
+  },
 });

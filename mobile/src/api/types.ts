@@ -237,7 +237,12 @@ export interface SearchAllResult {
 
 export type SearchPage<T> = Page<T> & {total: number};
 
-export type ReportTarget = 'post' | 'comment' | 'user' | 'community' | 'message';
+export type ReportTarget =
+  | 'post'
+  | 'comment'
+  | 'user'
+  | 'community'
+  | 'message';
 export type ReportReason = 'spam' | 'harassment' | 'inappropriate' | 'other';
 
 /** Local file to upload (from the image picker / camera). */

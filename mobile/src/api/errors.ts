@@ -39,7 +39,12 @@ export class ApiError extends Error {
   readonly code: ApiErrorCode;
   readonly details?: unknown;
 
-  constructor(status: number, code: ApiErrorCode, message?: string, details?: unknown) {
+  constructor(
+    status: number,
+    code: ApiErrorCode,
+    message?: string,
+    details?: unknown,
+  ) {
     super(message || DEFAULT_MESSAGES[code]);
     this.name = 'ApiError';
     this.status = status;
@@ -49,6 +54,10 @@ export class ApiError extends Error {
 
   /** Per-field messages for VALIDATION_ERROR (best effort, see fieldErrors()). */
   get fields(): Record<string, string> {
+    if (this.code === 'CONFLICT') {
+      const f = conflictField(this.details);
+      return f ? {[f]: `This ${f} is already taken.`} : {};
+    }
     return fieldErrors(this.details);
   }
 }
@@ -94,7 +103,11 @@ export function normalizeError(e: unknown): ApiError {
   if (e instanceof ApiError) {
     return e;
   }
-  if (e && typeof e === 'object' && (e as {name?: string}).name === 'AbortError') {
+  if (
+    e &&
+    typeof e === 'object' &&
+    (e as {name?: string}).name === 'AbortError'
+  ) {
     return new ApiError(0, 'ABORTED');
   }
   if (e instanceof TypeError) {
@@ -117,7 +130,13 @@ export function fieldErrors(details: unknown): Record<string, string> {
     return out;
   }
   const first = (v: unknown) =>
-    Array.isArray(v) ? (typeof v[0] === 'string' ? v[0] : undefined) : typeof v === 'string' ? v : undefined;
+    Array.isArray(v)
+      ? typeof v[0] === 'string'
+        ? v[0]
+        : undefined
+      : typeof v === 'string'
+      ? v
+      : undefined;
 
   if (Array.isArray(details)) {
     for (const issue of details) {
@@ -125,8 +144,13 @@ export function fieldErrors(details: unknown): Record<string, string> {
         continue;
       }
       const i = issue as {path?: unknown; field?: unknown; message?: unknown};
-      const path = Array.isArray(i.path) ? i.path.join('.') : (i.path ?? i.field);
-      if (typeof path === 'string' && path && typeof i.message === 'string' && !out[path]) {
+      const path = Array.isArray(i.path) ? i.path.join('.') : i.path ?? i.field;
+      if (
+        typeof path === 'string' &&
+        path &&
+        typeof i.message === 'string' &&
+        !out[path]
+      ) {
         out[path] = i.message;
       }
     }
@@ -149,4 +173,16 @@ export function fieldErrors(details: unknown): Record<string, string> {
 /** User-facing message for any error. */
 export function errorMessage(e: unknown): string {
   return normalizeError(e).message;
+}
+
+/** CONFLICT details are `{ field }` (e.g. username / email taken). */
+export function conflictField(details: unknown): string | null {
+  if (
+    details &&
+    typeof details === 'object' &&
+    typeof (details as {field?: unknown}).field === 'string'
+  ) {
+    return (details as {field: string}).field;
+  }
+  return null;
 }

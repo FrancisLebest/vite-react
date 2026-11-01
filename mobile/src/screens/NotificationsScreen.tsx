@@ -1,90 +1,95 @@
-import React, {useEffect} from 'react';
-import {FlatList, Pressable, StyleSheet, Text, View} from 'react-native';
-import {Avatar, BackHeader, EmptyState, Icon, Screen} from '../components/ui';
-import {useApp} from '../context/AppContext';
+import React, {useEffect, useRef} from 'react';
+import {StyleSheet, FlatList, RefreshControl} from 'react-native';
+import {useQueryClient} from '@tanstack/react-query';
+import {api, errorMessage} from '../api';
+import {NotificationRow} from '../components/NotificationRow';
+import {
+  BackHeader,
+  EmptyState,
+  ErrorState,
+  ListFooter,
+  LoadingState,
+  Screen,
+} from '../components/ui';
+import {qk} from '../query/keys';
+import {useNotifications} from '../query/messaging';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, spacing, weight} from '../theme';
-import {timeAgo} from '../utils/time';
+import {colors} from '../theme';
 
-export default function NotificationsScreen({
-  navigation,
-}: RootScreenProps<'Notifications'>) {
-  const {state, getUser, dispatch} = useApp();
-  // Snapshot of unread ids so they stay highlighted during this visit.
-  const [unreadIds] = React.useState(
-    () => new Set(state.notifications.filter(n => !n.read).map(n => n.id)),
-  );
+export default function NotificationsScreen(
+  _props: RootScreenProps<'Notifications'>,
+) {
+  const qc = useQueryClient();
+  const list = useNotifications();
+  // Ids that were unread when the screen opened stay highlighted during this visit.
+  const unreadSnapshot = useRef<Set<string> | null>(null);
+  if (!unreadSnapshot.current && list.data) {
+    unreadSnapshot.current = new Set(
+      list.items.filter(n => !n.read).map(n => n.id),
+    );
+  }
 
+  // Mark everything read on open.
   useEffect(() => {
-    dispatch({type: 'markNotificationsRead'});
-  }, [dispatch]);
+    api.notifications
+      .readAll()
+      .then(() => {
+        qc.setQueryData(qk.unreadNotifications(), {count: 0});
+      })
+      .catch(() => undefined);
+    return () => {
+      // Reflect the read state in the cached list when leaving.
+      qc.invalidateQueries(qk.notifications());
+    };
+  }, [qc]);
 
   return (
     <Screen>
       <BackHeader title="Notifications" />
       <FlatList
-        data={state.notifications}
+        data={list.items}
         keyExtractor={n => n.id}
-        renderItem={({item}) => {
-          const actor = getUser(item.actorId);
-          return (
-            <Pressable
-              style={[styles.row, unreadIds.has(item.id) && styles.unread]}
-              onPress={() =>
-                navigation.navigate('UserProfile', {userId: actor.id})
-              }>
-              <View>
-                <Avatar uri={actor.avatar} size={48} />
-                <View style={styles.icon}>
-                  <Icon name={item.icon} size={11} color={colors.white} />
-                </View>
-              </View>
-              <Text style={styles.text} numberOfLines={2}>
-                <Text style={styles.name}>{actor.name} </Text>
-                {item.text}
-              </Text>
-              <Text style={styles.time}>{timeAgo(item.createdAt)}</Text>
-            </Pressable>
-          );
-        }}
-        ListEmptyComponent={
-          <EmptyState
-            icon="notifications-off-outline"
-            title="No notifications"
+        renderItem={({item}) => (
+          <NotificationRow
+            notification={item}
+            highlight={
+              unreadSnapshot.current
+                ? unreadSnapshot.current.has(item.id)
+                : !item.read
+            }
           />
+        )}
+        onEndReached={list.loadMore}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={styles.grow}
+        refreshControl={
+          <RefreshControl
+            refreshing={list.refreshing}
+            onRefresh={list.refresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
+        ListEmptyComponent={
+          list.isLoading ? (
+            <LoadingState />
+          ) : list.isError ? (
+            <ErrorState
+              message={errorMessage(list.error)}
+              onRetry={() => list.refetch()}
+            />
+          ) : (
+            <EmptyState
+              icon="notifications-off-outline"
+              title="No notifications"
+              message="Likes, comments, follows and mentions will show up here."
+            />
+          )
         }
       />
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  unread: {backgroundColor: colors.primaryTint},
-  icon: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    flex: 1,
-    marginHorizontal: spacing.md,
-    fontSize: font.md,
-    color: colors.textSecondary,
-  },
-  name: {fontWeight: weight.bold, color: colors.text},
-  time: {fontSize: font.xs, color: colors.textMuted},
-});
+const styles = StyleSheet.create({grow: {flexGrow: 1}});

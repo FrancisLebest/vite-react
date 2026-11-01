@@ -53,7 +53,12 @@ export default function UsersScreen({navigation}: RootScreenProps<'Users'>) {
               name="funnel-outline"
               label="Advanced search"
               style={styles.ml}
-              onPress={() => navigation.navigate('Search', {type: 'users', openFilters: true})}
+              onPress={() =>
+                navigation.navigate('Search', {
+                  type: 'users',
+                  openFilters: true,
+                })
+              }
             />
           </>
         }
@@ -95,14 +100,15 @@ export default function UsersScreen({navigation}: RootScreenProps<'Users'>) {
             colors={[colors.primary]}
           />
         }
-        ListFooterComponent={
-          <ListFooter loading={list.isFetchingNextPage} />
-        }
+        ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         ListEmptyComponent={
           list.isLoading ? (
             <LoadingState />
           ) : list.isError ? (
-            <ErrorState message={errorMessage(list.error)} onRetry={() => list.refetch()} />
+            <ErrorState
+              message={errorMessage(list.error)}
+              onRetry={() => list.refetch()}
+            />
           ) : (
             <EmptyState
               icon="people-outline"

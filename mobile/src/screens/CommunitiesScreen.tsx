@@ -33,7 +33,9 @@ import {useResponsive} from '../utils/responsive';
 
 type KindFilter = 'all' | CommunityKind;
 
-export default function CommunitiesScreen({navigation}: RootScreenProps<'Communities'>) {
+export default function CommunitiesScreen({
+  navigation,
+}: RootScreenProps<'Communities'>) {
   const unread = useUnreadCounts();
   const {contentWidth} = useResponsive();
   const listRef = useRef<FlatList<Community>>(null);
@@ -41,9 +43,15 @@ export default function CommunitiesScreen({navigation}: RootScreenProps<'Communi
 
   const popular = useCommunities({sort: 'popular'});
   const mine = useCommunities({mine: true, sort: 'recent'});
-  const all = useCommunities({sort: 'recent', kind: kind === 'all' ? undefined : kind});
+  const all = useCommunities({
+    sort: 'recent',
+    kind: kind === 'all' ? undefined : kind,
+  });
 
-  const cardWidth = Math.max(Math.min((contentWidth - spacing.lg) / 2.6, 160), 120);
+  const cardWidth = Math.max(
+    Math.min((contentWidth - spacing.lg) / 2.6, 160),
+    120,
+  );
 
   const refresh = async () => {
     await Promise.all([popular.refetch(), mine.refetch(), all.refresh()]);
@@ -57,8 +65,12 @@ export default function CommunitiesScreen({navigation}: RootScreenProps<'Communi
         end={{x: 1, y: 1}}
         style={styles.hero}>
         <View style={styles.heroBody}>
-          <Text style={styles.heroTitle}>Find Your University or School Community</Text>
-          <Text style={styles.heroSub}>Join and connect with students like you</Text>
+          <Text style={styles.heroTitle}>
+            Find Your University or School Community
+          </Text>
+          <Text style={styles.heroSub}>
+            Join and connect with students like you
+          </Text>
           <PillButton
             small
             title="Explore Communities"
@@ -66,7 +78,8 @@ export default function CommunitiesScreen({navigation}: RootScreenProps<'Communi
             icon="arrow-forward"
             style={styles.heroBtn}
             onPress={() =>
-              all.items.length && listRef.current?.scrollToIndex({index: 0, animated: true})
+              all.items.length &&
+              listRef.current?.scrollToIndex({index: 0, animated: true})
             }
           />
         </View>
@@ -77,7 +90,10 @@ export default function CommunitiesScreen({navigation}: RootScreenProps<'Communi
       {popular.isLoading ? (
         <ActivityIndicator color={colors.primary} />
       ) : popular.isError ? (
-        <ErrorState message={errorMessage(popular.error)} onRetry={() => popular.refetch()} />
+        <ErrorState
+          message={errorMessage(popular.error)}
+          onRetry={() => popular.refetch()}
+        />
       ) : (
         <ScrollView
           horizontal
@@ -102,7 +118,13 @@ export default function CommunitiesScreen({navigation}: RootScreenProps<'Communi
         />
       )}
       {mine.hasNextPage ? (
-        <PillButton small variant="soft" title="Show more" onPress={mine.loadMore} style={styles.more} />
+        <PillButton
+          small
+          variant="soft"
+          title="Show more"
+          onPress={mine.loadMore}
+          style={styles.more}
+        />
       ) : null}
 
       <SectionHeader title="All Communities" />
@@ -129,7 +151,9 @@ export default function CommunitiesScreen({navigation}: RootScreenProps<'Communi
             <IconButton
               name="search"
               label="Search communities"
-              onPress={() => navigation.navigate('Search', {type: 'communities'})}
+              onPress={() =>
+                navigation.navigate('Search', {type: 'communities'})
+              }
             />
             <IconButton
               name="notifications-outline"
@@ -163,7 +187,10 @@ export default function CommunitiesScreen({navigation}: RootScreenProps<'Communi
           all.isLoading ? (
             <LoadingState />
           ) : all.isError ? (
-            <ErrorState message={errorMessage(all.error)} onRetry={() => all.refetch()} />
+            <ErrorState
+              message={errorMessage(all.error)}
+              onRetry={() => all.refetch()}
+            />
           ) : (
             <EmptyState
               icon="people-outline"
@@ -197,8 +224,16 @@ const styles = StyleSheet.create({
   },
   heroBody: {flex: 1, marginRight: spacing.sm},
   heroTitle: {color: colors.white, fontSize: font.xl, fontWeight: weight.bold},
-  heroSub: {color: 'rgba(255,255,255,0.85)', fontSize: font.sm, marginTop: spacing.xs},
-  heroBtn: {alignSelf: 'flex-start', marginTop: spacing.md, borderColor: colors.white},
+  heroSub: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: font.sm,
+    marginTop: spacing.xs,
+  },
+  heroBtn: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.md,
+    borderColor: colors.white,
+  },
   cards: {paddingHorizontal: spacing.lg, paddingBottom: spacing.sm},
   more: {alignSelf: 'center', marginTop: spacing.sm},
   kinds: {paddingBottom: spacing.sm},

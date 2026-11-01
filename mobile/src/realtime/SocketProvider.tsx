@@ -1,9 +1,20 @@
-import React, {createContext, useContext, useEffect, useMemo, useRef, useState} from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {AppState} from 'react-native';
 import {useQueryClient} from '@tanstack/react-query';
 import {io, Socket} from 'socket.io-client';
 import {client} from '../api';
-import type {ClientToServerEvents, ServerToClientEvents, UserSummary} from '../api/types';
+import type {
+  ClientToServerEvents,
+  ServerToClientEvents,
+  UserSummary,
+} from '../api/types';
 import {API_ORIGIN} from '../config';
 import {
   applyConversationRead,
@@ -35,7 +46,13 @@ export const useSocket = () => useContext(Ctx);
  * - `connect_error: UNAUTHORIZED` → refresh the token pair, then reconnect
  * - server events are written straight into the React Query cache
  */
-export function SocketProvider({meId, children}: {meId: string; children: React.ReactNode}) {
+export function SocketProvider({
+  meId,
+  children,
+}: {
+  meId: string;
+  children: React.ReactNode;
+}) {
   const qc = useQueryClient();
   const [connected, setConnected] = useState(false);
   const socketRef = useRef<AppSocket | null>(null);
@@ -70,7 +87,9 @@ export function SocketProvider({meId, children}: {meId: string; children: React.
       }
     });
 
-    socket.on('message:new', ({message}) => applyIncomingMessage(qc, message, meRef.current));
+    socket.on('message:new', ({message}) =>
+      applyIncomingMessage(qc, message, meRef.current),
+    );
     socket.on('notification:new', ({notification}) =>
       applyIncomingNotification(qc, notification),
     );
@@ -117,7 +136,8 @@ export function SocketProvider({meId, children}: {meId: string; children: React.
   const value = useMemo<SocketCtx>(
     () => ({
       connected,
-      emitTyping: conversationId => socketRef.current?.emit('typing', {conversationId}),
+      emitTyping: conversationId =>
+        socketRef.current?.emit('typing', {conversationId}),
       onTyping: l => {
         typingListeners.current.add(l);
         return () => typingListeners.current.delete(l);

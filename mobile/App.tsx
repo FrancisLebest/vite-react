@@ -31,7 +31,10 @@ export default function App({queryClient}: {queryClient?: QueryClient}) {
         <AuthProvider>
           <SheetProvider>
             <NavigationContainer theme={navTheme}>
-              <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+              <StatusBar
+                barStyle="dark-content"
+                backgroundColor={colors.white}
+              />
               <RootNavigator />
             </NavigationContainer>
           </SheetProvider>

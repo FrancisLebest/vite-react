@@ -114,7 +114,9 @@ export function VideoPlayer({
       {error ? (
         <View style={styles.center}>
           <Icon name="alert-circle-outline" size={36} color={colors.white} />
-          <Text style={styles.errorText}>This video can't be played right now.</Text>
+          <Text style={styles.errorText}>
+            This video can't be played right now.
+          </Text>
           <Pressable
             onPress={() => {
               setError(false);

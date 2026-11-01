@@ -18,7 +18,8 @@ export const qk = {
 
   user: (idOrUsername: string) => ['user', idOrUsername] as const,
   users: (p: UsersParams) => ['users', p] as const,
-  userPosts: (id: string, type?: PostType) => ['userPosts', id, type ?? 'all'] as const,
+  userPosts: (id: string, type?: PostType) =>
+    ['userPosts', id, type ?? 'all'] as const,
   followers: (id: string) => ['followers', id] as const,
   following: (id: string) => ['following', id] as const,
   suggested: () => ['suggested'] as const,

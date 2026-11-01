@@ -51,7 +51,9 @@ export default function LoginScreen({navigation}: RootScreenProps<'Login'>) {
           setIdentifier(v);
           setErrors(e => ({...e, identifier: null}));
         }}
-        onBlur={() => setErrors(e => ({...e, identifier: validate().identifier}))}
+        onBlur={() =>
+          setErrors(e => ({...e, identifier: validate().identifier}))
+        }
         error={errors.identifier}
         autoCapitalize="none"
         autoCorrect={false}
@@ -83,10 +85,17 @@ export default function LoginScreen({navigation}: RootScreenProps<'Login'>) {
         <Text style={authStyles.link}>Forgot password?</Text>
       </Pressable>
       <FormError message={formError} />
-      <PillButton title="Sign in" onPress={submit} loading={loading} style={authStyles.submit} />
+      <PillButton
+        title="Sign in"
+        onPress={submit}
+        loading={loading}
+        style={authStyles.submit}
+      />
       <View style={authStyles.linkRow}>
         <Text style={authStyles.linkMuted}>New to StudyHub? </Text>
-        <Pressable accessibilityRole="link" onPress={() => navigation.replace('Register')}>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => navigation.replace('Register')}>
           <Text style={authStyles.link}>Create an account</Text>
         </Pressable>
       </View>

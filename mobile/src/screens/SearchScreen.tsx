@@ -38,7 +38,11 @@ import {
   SearchInput,
 } from '../components/ui';
 import {categoryLabel} from '../constants/categories';
-import {useCategories, useTrendingHashtags, useUniversities} from '../query/hooks';
+import {
+  useCategories,
+  useTrendingHashtags,
+  useUniversities,
+} from '../query/hooks';
 import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
 import {colors, font, radius, spacing, weight} from '../theme';
@@ -70,7 +74,10 @@ type Row =
   | {kind: 'user'; id: string; item: UserSummary}
   | {kind: 'community'; id: string; item: Community};
 
-export default function SearchScreen({route, navigation}: RootScreenProps<'Search'>) {
+export default function SearchScreen({
+  route,
+  navigation,
+}: RootScreenProps<'Search'>) {
   const [query, setQuery] = useState(route.params?.query ?? '');
   const [type, setType] = useState<SearchType>(route.params?.type ?? 'all');
   const [filters, setFilters] = useState<Filters>({
@@ -90,7 +97,12 @@ export default function SearchScreen({route, navigation}: RootScreenProps<'Searc
     sort: filters.sort,
   };
   const enabled = q.length > 0 || !!filters.category || !!filters.university;
-  const {type: _t, ...base} = params;
+  const base = {
+    q: params.q,
+    category: params.category,
+    university: params.university,
+    sort: params.sort,
+  };
 
   const all = useQuery({
     queryKey: [...qk.search(params), 'all'],
@@ -116,8 +128,7 @@ export default function SearchScreen({route, navigation}: RootScreenProps<'Searc
   });
 
   const active = type === 'all' ? all : paged;
-  const total =
-    type === 'all' ? all.data?.total : paged.data?.pages[0]?.total;
+  const total = type === 'all' ? all.data?.total : paged.data?.pages[0]?.total;
 
   const rows = useMemo<Row[]>(() => {
     if (type === 'all') {
@@ -128,19 +139,26 @@ export default function SearchScreen({route, navigation}: RootScreenProps<'Searc
       const out: Row[] = [];
       if (d.posts.length) {
         out.push({kind: 'header', id: 'h-posts', title: 'Posts & videos'});
-        d.posts.forEach(p => out.push({kind: 'post', id: `p-${p.id}`, item: p}));
+        d.posts.forEach(p =>
+          out.push({kind: 'post', id: `p-${p.id}`, item: p}),
+        );
       }
       if (d.users.length) {
         out.push({kind: 'header', id: 'h-users', title: 'People'});
-        d.users.forEach(u => out.push({kind: 'user', id: `u-${u.id}`, item: u}));
+        d.users.forEach(u =>
+          out.push({kind: 'user', id: `u-${u.id}`, item: u}),
+        );
       }
       if (d.communities.length) {
         out.push({kind: 'header', id: 'h-comm', title: 'Communities'});
-        d.communities.forEach(c => out.push({kind: 'community', id: `c-${c.id}`, item: c}));
+        d.communities.forEach(c =>
+          out.push({kind: 'community', id: `c-${c.id}`, item: c}),
+        );
       }
       return out;
     }
-    const kind = type === 'posts' ? 'post' : type === 'users' ? 'user' : 'community';
+    const kind =
+      type === 'posts' ? 'post' : type === 'users' ? 'user' : 'community';
     const seen = new Set<string>();
     const out: Row[] = [];
     paged.data?.pages.forEach(p =>
@@ -155,32 +173,48 @@ export default function SearchScreen({route, navigation}: RootScreenProps<'Searc
   }, [type, all.data, paged.data]);
 
   const activeFilters =
-    (filters.category ? 1 : 0) + (filters.university ? 1 : 0) + (filters.sort !== 'relevant' ? 1 : 0);
-  const clearFilters = () => setFilters({category: null, university: null, sort: 'relevant'});
+    (filters.category ? 1 : 0) +
+    (filters.university ? 1 : 0) +
+    (filters.sort !== 'relevant' ? 1 : 0);
+  const clearFilters = () =>
+    setFilters({category: null, university: null, sort: 'relevant'});
 
   let content: React.ReactNode;
   if (!enabled) {
     content = (
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.suggest}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.suggest}>
         <Text style={styles.suggestTitle}>Trending hashtags</Text>
         {hashtags.isLoading ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
           <View style={styles.wrap}>
             {(hashtags.data ?? []).map(h => (
-              <Chip key={h.tag} label={`#${h.tag}`} onPress={() => setQuery(`#${h.tag}`)} />
+              <Chip
+                key={h.tag}
+                label={`#${h.tag}`}
+                onPress={() => setQuery(`#${h.tag}`)}
+              />
             ))}
           </View>
         )}
         {!hashtags.isLoading && !hashtags.data?.length ? (
-          <Text style={styles.summaryCount}>Search posts, people and communities.</Text>
+          <Text style={styles.summaryCount}>
+            Search posts, people and communities.
+          </Text>
         ) : null}
       </ScrollView>
     );
   } else if (active.isLoading) {
     content = <LoadingState label="Searching" />;
   } else if (active.isError && !rows.length) {
-    content = <ErrorState message={errorMessage(active.error)} onRetry={() => active.refetch()} />;
+    content = (
+      <ErrorState
+        message={errorMessage(active.error)}
+        onRetry={() => active.refetch()}
+      />
+    );
   } else {
     content = (
       <FlatList
@@ -190,7 +224,11 @@ export default function SearchScreen({route, navigation}: RootScreenProps<'Searc
         keyboardDismissMode="on-drag"
         contentContainerStyle={styles.list}
         onEndReached={() => {
-          if (type !== 'all' && paged.hasNextPage && !paged.isFetchingNextPage) {
+          if (
+            type !== 'all' &&
+            paged.hasNextPage &&
+            !paged.isFetchingNextPage
+          ) {
             paged.fetchNextPage();
           }
         }}
@@ -218,7 +256,11 @@ export default function SearchScreen({route, navigation}: RootScreenProps<'Searc
             icon="search-outline"
             title="No results found"
             message="Try a different keyword or clear your filters."
-            action={activeFilters ? {label: 'Clear filters', onPress: clearFilters} : undefined}
+            action={
+              activeFilters
+                ? {label: 'Clear filters', onPress: clearFilters}
+                : undefined
+            }
           />
         }
       />
@@ -250,14 +292,25 @@ export default function SearchScreen({route, navigation}: RootScreenProps<'Searc
       {enabled ? (
         <View style={styles.summary}>
           <Text style={styles.summaryTitle}>
-            {filters.category && !q ? categoryLabel(filters.category) : 'Search Results'}
+            {filters.category && !q
+              ? categoryLabel(filters.category)
+              : 'Search Results'}
           </Text>
           <Text style={styles.summaryCount}>
-            {active.isFetching && !active.isFetchingNextPage ? 'Searching…' : total != null ? `${total} result${total === 1 ? '' : 's'}` : ''}
+            {active.isFetching && !(type !== 'all' && paged.isFetchingNextPage)
+              ? 'Searching…'
+              : total != null
+              ? `${total} result${total === 1 ? '' : 's'}`
+              : ''}
           </Text>
         </View>
       ) : null}
-      <ChipRow items={TYPE_ITEMS} value={type} onChange={setType} style={styles.chips} />
+      <ChipRow
+        items={TYPE_ITEMS}
+        value={type}
+        onChange={setType}
+        style={styles.chips}
+      />
 
       {content}
 
@@ -314,7 +367,8 @@ function FilterSheet({
   };
 
   const perRow = contentWidth >= 500 ? 5 : 4;
-  const tileWidth = (contentWidth - spacing.xl * 2 - spacing.sm * (perRow - 1)) / perRow;
+  const tileWidth =
+    (contentWidth - spacing.xl * 2 - spacing.sm * (perRow - 1)) / perRow;
 
   return (
     <Modal
@@ -324,7 +378,11 @@ function FilterSheet({
       onShow={onShow}
       onRequestClose={onClose}
       supportedOrientations={['portrait', 'landscape']}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close filters" />
+      <Pressable
+        style={styles.backdrop}
+        onPress={onClose}
+        accessibilityLabel="Close filters"
+      />
       <View style={[styles.sheet, {paddingBottom: insets.bottom + spacing.lg}]}>
         <View style={styles.handle} />
         <ScrollView contentContainerStyle={styles.sheetContent} bounces={false}>
@@ -353,7 +411,9 @@ function FilterSheet({
               return (
                 <Pressable
                   key={c.id}
-                  onPress={() => setDraft(d => ({...d, category: active ? null : c.id}))}
+                  onPress={() =>
+                    setDraft(d => ({...d, category: active ? null : c.id}))
+                  }
                   accessibilityRole="checkbox"
                   accessibilityState={{checked: active}}
                   accessibilityLabel={c.label}
@@ -365,8 +425,14 @@ function FilterSheet({
                     },
                     active && styles.catTileActive,
                   ]}>
-                  <Icon name={c.icon} size={24} color={active ? colors.white : colors.primary} />
-                  <Text style={[styles.catLabel, active && styles.catLabelActive]} numberOfLines={1}>
+                  <Icon
+                    name={c.icon}
+                    size={24}
+                    color={active ? colors.white : colors.primary}
+                  />
+                  <Text
+                    style={[styles.catLabel, active && styles.catLabelActive]}
+                    numberOfLines={1}>
                     {c.label}
                   </Text>
                 </Pressable>
@@ -381,13 +447,22 @@ function FilterSheet({
             accessibilityRole="button"
             accessibilityState={{expanded: uniOpen}}>
             <Icon name="business-outline" size={18} color={colors.primary} />
-            <Text style={styles.selectText}>{draft.university ?? 'All Universities'}</Text>
-            <Icon name={uniOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.text} />
+            <Text style={styles.selectText}>
+              {draft.university ?? 'All Universities'}
+            </Text>
+            <Icon
+              name={uniOpen ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={colors.text}
+            />
           </Pressable>
           {uniOpen ? (
             <View style={styles.options}>
               {universities.isLoading ? (
-                <ActivityIndicator color={colors.primary} style={styles.optionLoader} />
+                <ActivityIndicator
+                  color={colors.primary}
+                  style={styles.optionLoader}
+                />
               ) : (
                 [null, ...(universities.data ?? [])].map(u => (
                   <Pressable
@@ -399,7 +474,11 @@ function FilterSheet({
                       setDraft(d => ({...d, university: u}));
                       setUniOpen(false);
                     }}>
-                    <Text style={[styles.optionText, draft.university === u && styles.optionActive]}>
+                    <Text
+                      style={[
+                        styles.optionText,
+                        draft.university === u && styles.optionActive,
+                      ]}>
                       {u ?? 'All Universities'}
                     </Text>
                     {draft.university === u ? (
@@ -422,7 +501,12 @@ function FilterSheet({
                   accessibilityRole="radio"
                   accessibilityState={{selected: active}}
                   style={[styles.segmentItem, active && styles.segmentActive]}>
-                  <Text style={[styles.segmentText, active && styles.segmentTextActive]} numberOfLines={1}>
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      active && styles.segmentTextActive,
+                    ]}
+                    numberOfLines={1}>
                     {s.label}
                   </Text>
                 </Pressable>
@@ -430,7 +514,11 @@ function FilterSheet({
             })}
           </View>
 
-          <PillButton title="Apply Filters" onPress={() => onApply(draftType, draft)} style={styles.apply} />
+          <PillButton
+            title="Apply Filters"
+            onPress={() => onApply(draftType, draft)}
+            style={styles.apply}
+          />
           <Pressable
             onPress={() => {
               setDraftType('all');
@@ -456,7 +544,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
   },
-  summaryTitle: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
+  summaryTitle: {
+    fontSize: font.lg,
+    fontWeight: weight.bold,
+    color: colors.text,
+  },
   summaryCount: {fontSize: font.sm, color: colors.textSecondary},
   chips: {paddingBottom: spacing.sm},
   list: {paddingTop: spacing.xs, paddingBottom: spacing.xxl, flexGrow: 1},
@@ -469,7 +561,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   suggest: {padding: spacing.lg},
-  suggestTitle: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text, marginBottom: spacing.md},
+  suggestTitle: {
+    fontSize: font.lg,
+    fontWeight: weight.bold,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
   backdrop: {flex: 1, backgroundColor: colors.overlay},
   sheet: {
     backgroundColor: colors.white,
@@ -489,7 +586,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   sheetContent: {paddingHorizontal: spacing.xl, paddingTop: spacing.md},
-  sheetHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm},
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
   sheetTitle: {
     flex: 1,
     fontSize: font.xl,
@@ -526,7 +627,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
   },
-  selectText: {flex: 1, marginLeft: spacing.sm, fontSize: font.md, color: colors.text},
+  selectText: {
+    flex: 1,
+    marginLeft: spacing.sm,
+    fontSize: font.md,
+    color: colors.text,
+  },
   options: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -543,10 +649,24 @@ const styles = StyleSheet.create({
   },
   optionText: {fontSize: font.md, color: colors.text},
   optionActive: {color: colors.primary, fontWeight: weight.semibold},
-  segment: {flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.pill, padding: 4},
-  segmentItem: {flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.pill},
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.pill,
+    padding: 4,
+  },
+  segmentItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+  },
   segmentActive: {backgroundColor: colors.primary},
-  segmentText: {fontSize: font.sm, color: colors.text, fontWeight: weight.medium},
+  segmentText: {
+    fontSize: font.sm,
+    color: colors.text,
+    fontWeight: weight.medium,
+  },
   segmentTextActive: {color: colors.white, fontWeight: weight.semibold},
   apply: {marginTop: spacing.xxl},
   reset: {alignItems: 'center', paddingVertical: spacing.md},

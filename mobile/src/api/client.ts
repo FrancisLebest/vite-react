@@ -153,7 +153,10 @@ export class ApiClient {
     try {
       res = await this.fetchWithTimeout(`${this.apiUrl}/auth/refresh`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
         body: JSON.stringify({refreshToken}),
       });
     } catch (e) {
@@ -187,7 +190,8 @@ export class ApiClient {
     timeoutMs = this.timeoutMs,
     signal?: AbortSignal,
   ): Promise<Response> {
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const controller =
+      typeof AbortController !== 'undefined' ? new AbortController() : null;
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
@@ -196,7 +200,10 @@ export class ApiClient {
     const onAbort = () => controller?.abort();
     signal?.addEventListener?.('abort', onAbort);
     try {
-      return await this.fetchImpl(url, {...init, signal: controller?.signal ?? signal});
+      return await this.fetchImpl(url, {
+        ...init,
+        signal: controller?.signal ?? signal,
+      });
     } catch (e) {
       if (timedOut) {
         throw new ApiError(0, 'TIMEOUT');
@@ -208,7 +215,11 @@ export class ApiClient {
     }
   }
 
-  async request<T>(method: string, path: string, opts: RequestOptions = {}): Promise<T> {
+  async request<T>(
+    method: string,
+    path: string,
+    opts: RequestOptions = {},
+  ): Promise<T> {
     const {auth = true} = opts;
     const url = `${this.apiUrl}${path}${buildQuery(opts.query)}`;
 

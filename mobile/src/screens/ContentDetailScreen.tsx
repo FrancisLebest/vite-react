@@ -1,5 +1,12 @@
 import React, {useEffect, useState} from 'react';
-import {Pressable, RefreshControl, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {errorMessage} from '../api';
 import type {Post} from '../api/types';
@@ -34,7 +41,10 @@ import {useAppActive} from '../utils/hooks';
 import {formatCount, useResponsive} from '../utils/responsive';
 import {timeAgo} from '../utils/time';
 
-export default function ContentDetailScreen({route, navigation}: RootScreenProps<'ContentDetail'>) {
+export default function ContentDetailScreen({
+  route,
+  navigation,
+}: RootScreenProps<'ContentDetail'>) {
   const {postId} = route.params;
   const q = usePost(postId);
   const options = usePostOptions();
@@ -63,7 +73,10 @@ export default function ContentDetailScreen({route, navigation}: RootScreenProps
       {q.isLoading ? (
         <LoadingState />
       ) : q.isError || !post ? (
-        <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />
+        <ErrorState
+          message={errorMessage(q.error)}
+          onRetry={() => q.refetch()}
+        />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -99,7 +112,8 @@ function VideoDetail({post}: {post: Post}) {
   const share = useSharePost();
   const [paused, setPaused] = useState(false);
   const media = post.media!;
-  const ratio = media.width && media.height ? media.width / media.height : 9 / 16;
+  const ratio =
+    media.width && media.height ? media.width / media.height : 9 / 16;
   const playerWidth = contentWidth - spacing.lg * 2;
   const playerHeight = Math.min(playerWidth / ratio, height * 0.62);
   const author = post.author;
@@ -123,7 +137,9 @@ function VideoDetail({post}: {post: Post}) {
 
       {post.text ? <Text style={styles.title}>{post.text}</Text> : null}
       {post.hashtags.length ? (
-        <Text style={styles.tags}>{post.hashtags.map(h => `#${h}`).join(' ')}</Text>
+        <Text style={styles.tags}>
+          {post.hashtags.map(h => `#${h}`).join(' ')}
+        </Text>
       ) : null}
       <Text style={styles.views}>
         {formatCount(post.viewCount)} views · {timeAgo(post.createdAt)}
@@ -171,7 +187,10 @@ function VideoDetail({post}: {post: Post}) {
           <Text style={styles.meta}>@{author.username}</Text>
         </View>
         {author.id !== me?.id ? (
-          <FollowButton following={author.isFollowing} onPress={() => follow.mutate(author)} />
+          <FollowButton
+            following={author.isFollowing}
+            onPress={() => follow.mutate(author)}
+          />
         ) : null}
       </Pressable>
     </View>
@@ -193,7 +212,8 @@ function CommentsPreview({post}: {post: Post}) {
           <Avatar uri={c.author.avatarUrl} name={c.author.name} size={32} />
           <View style={styles.commentBody}>
             <Text style={styles.commentName}>
-              {c.author.name} <Text style={styles.commentTime}>· {timeAgo(c.createdAt)}</Text>
+              {c.author.name}{' '}
+              <Text style={styles.commentTime}>· {timeAgo(c.createdAt)}</Text>
             </Text>
             <Text style={styles.commentText}>{c.text}</Text>
           </View>
@@ -253,8 +273,17 @@ const styles = StyleSheet.create({
   },
   authorBody: {flex: 1, marginHorizontal: spacing.md},
   row: {flexDirection: 'row', alignItems: 'center'},
-  authorName: {fontSize: font.md, fontWeight: weight.bold, color: colors.text, marginRight: 4},
-  comment: {flexDirection: 'row', paddingHorizontal: spacing.lg, marginBottom: spacing.md},
+  authorName: {
+    fontSize: font.md,
+    fontWeight: weight.bold,
+    color: colors.text,
+    marginRight: 4,
+  },
+  comment: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
   commentBody: {flex: 1, marginLeft: spacing.md},
   commentName: {fontSize: font.sm, fontWeight: weight.bold, color: colors.text},
   commentTime: {fontWeight: weight.regular, color: colors.textMuted},

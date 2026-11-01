@@ -46,8 +46,13 @@ export function useConversation(id: string) {
   });
 }
 
-function findConversation(qc: QueryClient, id: string): Conversation | undefined {
-  const data = qc.getQueryData<InfiniteData<Page<Conversation>>>(qk.conversations());
+function findConversation(
+  qc: QueryClient,
+  id: string,
+): Conversation | undefined {
+  const data = qc.getQueryData<InfiniteData<Page<Conversation>>>(
+    qk.conversations(),
+  );
   for (const p of data?.pages ?? []) {
     const c = p.items.find(i => i.id === id);
     if (c) {
@@ -64,7 +69,11 @@ export function useMessages(conversationId: string) {
 }
 
 export function useNotifications(enabled = true) {
-  return useCursorList<AppNotification>(qk.notifications(), api.notifications.list, {enabled});
+  return useCursorList<AppNotification>(
+    qk.notifications(),
+    api.notifications.list,
+    {enabled},
+  );
 }
 
 export function useUnreadCounts(enabled = true) {
@@ -123,7 +132,14 @@ export function useSendMessage(conversationId: string, me: Me | null) {
           },
           text,
           media: media
-            ? {kind: 'image', url: media.uri, thumbnailUrl: null, durationSec: null, width: null, height: null}
+            ? {
+                kind: 'image',
+                url: media.uri,
+                thumbnailUrl: null,
+                durationSec: null,
+                width: null,
+                height: null,
+              }
             : null,
           createdAt: new Date().toISOString(),
         };
@@ -141,12 +157,19 @@ export function useSendMessage(conversationId: string, me: Me | null) {
   });
 }
 
-function replaceMessage(qc: QueryClient, convId: string, tmpId: string | undefined, msg: Message) {
+function replaceMessage(
+  qc: QueryClient,
+  convId: string,
+  tmpId: string | undefined,
+  msg: Message,
+) {
   qc.setQueryData<InfiniteData<Page<Message>>>(qk.messages(convId), data => {
     if (!data) {
       return data;
     }
-    const alreadyThere = data.pages.some(p => p.items.some(m => m.id === msg.id));
+    const alreadyThere = data.pages.some(p =>
+      p.items.some(m => m.id === msg.id),
+    );
     return {
       ...data,
       pages: data.pages.map(p => ({
@@ -159,10 +182,20 @@ function replaceMessage(qc: QueryClient, convId: string, tmpId: string | undefin
   });
 }
 
-function removeMessage(qc: QueryClient, convId: string, tmpId: string | undefined) {
+function removeMessage(
+  qc: QueryClient,
+  convId: string,
+  tmpId: string | undefined,
+) {
   qc.setQueryData<InfiniteData<Page<Message>>>(qk.messages(convId), data =>
     data
-      ? {...data, pages: data.pages.map(p => ({...p, items: p.items.filter(m => m.id !== tmpId)}))}
+      ? {
+          ...data,
+          pages: data.pages.map(p => ({
+            ...p,
+            items: p.items.filter(m => m.id !== tmpId),
+          })),
+        }
       : data,
   );
 }
@@ -181,8 +214,10 @@ export function useMarkConversationRead() {
 export function useMuteConversation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({id, muted}: {id: string; muted: boolean}) => api.messaging.update(id, {muted}),
-    onMutate: ({id, muted}) => patchEntities(qc, isConversation(id), o => ({...o, muted})),
+    mutationFn: ({id, muted}: {id: string; muted: boolean}) =>
+      api.messaging.update(id, {muted}),
+    onMutate: ({id, muted}) =>
+      patchEntities(qc, isConversation(id), o => ({...o, muted})),
     onError: (_e, _v, snap) => snap?.forEach(([k, d]) => qc.setQueryData(k, d)),
   });
 }
@@ -190,15 +225,24 @@ export function useMuteConversation() {
 /* ------------------------- realtime cache updates ------------------------ */
 
 /** Apply a `message:new` (or our own sent message) to every relevant cache. */
-export function applyIncomingMessage(qc: QueryClient, msg: Message, meId: string | null) {
+export function applyIncomingMessage(
+  qc: QueryClient,
+  msg: Message,
+  meId: string | null,
+) {
   // Thread: prepend (newest first), dedupe by id.
   if (qc.getQueryData(qk.messages(msg.conversationId))) {
     const fromMe = msg.sender.id === meId;
-    const data = qc.getQueryData<InfiniteData<Page<Message>>>(qk.messages(msg.conversationId));
+    const data = qc.getQueryData<InfiniteData<Page<Message>>>(
+      qk.messages(msg.conversationId),
+    );
     const exists = data?.pages.some(p => p.items.some(m => m.id === msg.id));
     // Our own optimistic message is replaced by useSendMessage.onSuccess.
     const hasPendingTmp =
-      fromMe && data?.pages[0]?.items.some(m => m.id.startsWith('tmp-') && m.text === msg.text);
+      fromMe &&
+      data?.pages[0]?.items.some(
+        m => m.id.startsWith('tmp-') && m.text === msg.text,
+      );
     if (!exists && !hasPendingTmp) {
       prependToPages(qc, qk.messages(msg.conversationId), msg);
     }
@@ -208,34 +252,38 @@ export function applyIncomingMessage(qc: QueryClient, msg: Message, meId: string
   const viewing = activeConversationId === msg.conversationId;
   const fromMe = msg.sender.id === meId;
   let found = false;
-  qc.setQueryData<InfiniteData<Page<Conversation>>>(qk.conversations(), data => {
-    if (!data || !data.pages.length) {
-      return data;
-    }
-    let conv: Conversation | undefined;
-    const pages = data.pages.map(p => ({
-      ...p,
-      items: p.items.filter(c => {
-        if (c.id === msg.conversationId) {
-          conv = c;
-          return false;
-        }
-        return true;
-      }),
-    }));
-    if (!conv) {
-      return data;
-    }
-    found = true;
-    const updated: Conversation = {
-      ...conv,
-      lastMessage: msg,
-      updatedAt: msg.createdAt,
-      unreadCount: fromMe || viewing ? conv.unreadCount : conv.unreadCount + 1,
-    };
-    pages[0] = {...pages[0], items: [updated, ...pages[0].items]};
-    return {...data, pages};
-  });
+  qc.setQueryData<InfiniteData<Page<Conversation>>>(
+    qk.conversations(),
+    data => {
+      if (!data || !data.pages.length) {
+        return data;
+      }
+      let conv: Conversation | undefined;
+      const pages = data.pages.map(p => ({
+        ...p,
+        items: p.items.filter(c => {
+          if (c.id === msg.conversationId) {
+            conv = c;
+            return false;
+          }
+          return true;
+        }),
+      }));
+      if (!conv) {
+        return data;
+      }
+      found = true;
+      const updated: Conversation = {
+        ...conv,
+        lastMessage: msg,
+        updatedAt: msg.createdAt,
+        unreadCount:
+          fromMe || viewing ? conv.unreadCount : conv.unreadCount + 1,
+      };
+      pages[0] = {...pages[0], items: [updated, ...pages[0].items]};
+      return {...data, pages};
+    },
+  );
   qc.setQueryData<Conversation>(qk.conversation(msg.conversationId), c =>
     c ? {...c, lastMessage: msg, updatedAt: msg.createdAt} : c,
   );
@@ -249,7 +297,9 @@ export function applyIncomingMessage(qc: QueryClient, msg: Message, meId: string
 
 export function applyIncomingNotification(qc: QueryClient, n: AppNotification) {
   prependToPages(qc, qk.notifications(), n);
-  qc.setQueryData<{count: number}>(qk.unreadNotifications(), d => ({count: (d?.count ?? 0) + 1}));
+  qc.setQueryData<{count: number}>(qk.unreadNotifications(), d => ({
+    count: (d?.count ?? 0) + 1,
+  }));
 }
 
 /* ---------------------------- read receipts ----------------------------- */
@@ -265,7 +315,10 @@ export function applyConversationRead(
   meId: string | null,
 ) {
   if (userId === meId) {
-    patchEntities(qc, isConversation(conversationId), o => ({...o, unreadCount: 0}));
+    patchEntities(qc, isConversation(conversationId), o => ({
+      ...o,
+      unreadCount: 0,
+    }));
     qc.invalidateQueries(qk.unreadConversations());
     return;
   }

@@ -99,8 +99,17 @@ export const VideoFeedItem = React.memo(function VideoFeedItem({
       }
       heart.setValue(0);
       Animated.sequence([
-        Animated.spring(heart, {toValue: 1, useNativeDriver: true, friction: 4}),
-        Animated.timing(heart, {toValue: 0, duration: 250, delay: 300, useNativeDriver: true}),
+        Animated.spring(heart, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 4,
+        }),
+        Animated.timing(heart, {
+          toValue: 0,
+          duration: 250,
+          delay: 300,
+          useNativeDriver: true,
+        }),
       ]).start();
       return;
     }
@@ -149,7 +158,9 @@ export const VideoFeedItem = React.memo(function VideoFeedItem({
         style={[styles.tagChip, {top: topInset + spacing.sm}]}
         accessibilityRole="button"
         accessibilityLabel={`Category ${categoryLabel(post.category)}`}
-        onPress={() => navigation.navigate('Search', {category: post.category})}>
+        onPress={() =>
+          navigation.navigate('Search', {category: post.category})
+        }>
         <Icon name="school" size={14} color={colors.white} />
         <Text style={styles.tagText}>{categoryLabel(post.category)}</Text>
       </Pressable>
@@ -160,7 +171,14 @@ export const VideoFeedItem = React.memo(function VideoFeedItem({
           styles.burst,
           {
             opacity: heart,
-            transform: [{scale: heart.interpolate({inputRange: [0, 1], outputRange: [0.4, 1.2]})}],
+            transform: [
+              {
+                scale: heart.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.4, 1.2],
+                }),
+              },
+            ],
           },
         ]}>
         <Icon name="heart" size={110} color={colors.white} />
@@ -170,7 +188,9 @@ export const VideoFeedItem = React.memo(function VideoFeedItem({
       <View style={styles.rail}>
         <View>
           <Pressable
-            onPress={() => navigation.navigate('UserProfile', {userId: author.id})}
+            onPress={() =>
+              navigation.navigate('UserProfile', {userId: author.id})
+            }
             accessibilityRole="button"
             accessibilityLabel={`Open ${author.name}'s profile`}>
             <Avatar uri={author.avatarUrl} name={author.name} size={48} ring />
@@ -179,10 +199,18 @@ export const VideoFeedItem = React.memo(function VideoFeedItem({
             <Pressable
               onPress={() => follow.mutate(author)}
               accessibilityRole="button"
-              accessibilityLabel={author.isFollowing ? `Unfollow ${author.name}` : `Follow ${author.name}`}
+              accessibilityLabel={
+                author.isFollowing
+                  ? `Unfollow ${author.name}`
+                  : `Follow ${author.name}`
+              }
               hitSlop={6}
               style={[styles.plus, author.isFollowing && styles.plusFollowing]}>
-              <Icon name={author.isFollowing ? 'checkmark' : 'add'} size={12} color={colors.white} />
+              <Icon
+                name={author.isFollowing ? 'checkmark' : 'add'}
+                size={12}
+                color={colors.white}
+              />
             </Pressable>
           ) : null}
         </View>
@@ -232,7 +260,9 @@ export const VideoFeedItem = React.memo(function VideoFeedItem({
           <Pressable
             style={styles.authorTap}
             accessibilityRole="button"
-            onPress={() => navigation.navigate('UserProfile', {userId: author.id})}>
+            onPress={() =>
+              navigation.navigate('UserProfile', {userId: author.id})
+            }>
             <Text style={styles.authorName} numberOfLines={1}>
               @{author.username}
             </Text>
@@ -272,7 +302,9 @@ export const VideoFeedItem = React.memo(function VideoFeedItem({
             accessibilityRole="button"
             onPress={() =>
               post.community &&
-              navigation.navigate('CommunityDetail', {communityId: post.community.id})
+              navigation.navigate('CommunityDetail', {
+                communityId: post.community.id,
+              })
             }>
             <Icon name="people" size={14} color={colors.white} />
             <Text style={styles.soundText} numberOfLines={1}>
@@ -326,7 +358,13 @@ const styles = StyleSheet.create({
     padding: spacing.xxl,
   },
   noMediaText: {color: colors.white, fontSize: font.xl, textAlign: 'center'},
-  bottomShade: {position: 'absolute', left: 0, right: 0, bottom: 0, height: '45%'},
+  bottomShade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '45%',
+  },
   tagChip: {
     position: 'absolute',
     left: spacing.lg,
@@ -337,9 +375,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
-  tagText: {color: colors.white, fontSize: font.sm, fontWeight: weight.semibold, marginLeft: 6},
+  tagText: {
+    color: colors.white,
+    fontSize: font.sm,
+    fontWeight: weight.semibold,
+    marginLeft: 6,
+  },
   burst: {position: 'absolute', alignSelf: 'center', top: '38%'},
-  rail: {position: 'absolute', right: spacing.md, bottom: 110, alignItems: 'center'},
+  rail: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: 110,
+    alignItems: 'center',
+  },
   plus: {
     position: 'absolute',
     bottom: -8,
@@ -361,8 +409,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
     ...textShadow,
   },
-  caption: {paddingLeft: spacing.lg, paddingRight: 84, paddingBottom: spacing.xl},
-  authorRow: {flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm},
+  caption: {
+    paddingLeft: spacing.lg,
+    paddingRight: 84,
+    paddingBottom: spacing.xl,
+  },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
   authorTap: {flexDirection: 'row', alignItems: 'center', flexShrink: 1},
   authorName: {
     color: colors.white,
@@ -380,7 +436,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginLeft: spacing.sm,
   },
-  followOutlineText: {color: colors.white, fontWeight: weight.semibold, fontSize: font.sm},
+  followOutlineText: {
+    color: colors.white,
+    fontWeight: weight.semibold,
+    fontSize: font.sm,
+  },
   captionText: {color: colors.white, fontSize: font.md, ...textShadow},
   tags: {flexDirection: 'row', flexWrap: 'wrap', marginTop: 2},
   hashtag: {
@@ -391,5 +451,10 @@ const styles = StyleSheet.create({
     ...textShadow,
   },
   soundRow: {flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm},
-  soundText: {color: colors.white, fontSize: font.sm, marginLeft: 6, ...textShadow},
+  soundText: {
+    color: colors.white,
+    fontSize: font.sm,
+    marginLeft: 6,
+    ...textShadow,
+  },
 });

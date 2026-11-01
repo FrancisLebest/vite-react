@@ -78,7 +78,13 @@ export default function CreateCommunityScreen({
       return;
     }
     setSaving(true);
-    const body = {name: trimmed, description: description.trim(), kind, icon, color};
+    const body = {
+      name: trimmed,
+      description: description.trim(),
+      kind,
+      icon,
+      color,
+    };
     try {
       const saved = editId
         ? await api.communities.update(editId, body)
@@ -113,14 +119,22 @@ export default function CreateCommunityScreen({
   return (
     <Screen edges={Platform.OS === 'ios' ? ['bottom'] : ['top', 'bottom']}>
       <View style={styles.header}>
-        <IconButton name="close" label="Cancel" onPress={() => navigation.goBack()} />
-        <Text style={styles.title}>{editing ? 'Edit Community' : 'Create a Community'}</Text>
+        <IconButton
+          name="close"
+          label="Cancel"
+          onPress={() => navigation.goBack()}
+        />
+        <Text style={styles.title}>
+          {editing ? 'Edit Community' : 'Create a Community'}
+        </Text>
         <View style={styles.spacer} />
       </View>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled">
           <TextField
             label="Community name"
             value={name}
@@ -142,7 +156,12 @@ export default function CreateCommunityScreen({
           <Text style={styles.label}>Type</Text>
           <View style={styles.wrap}>
             {KINDS.map(k => (
-              <Chip key={k.key} label={k.label} active={kind === k.key} onPress={() => setKind(k.key)} />
+              <Chip
+                key={k.key}
+                label={k.label}
+                active={kind === k.key}
+                onPress={() => setKind(k.key)}
+              />
             ))}
           </View>
 
@@ -155,8 +174,15 @@ export default function CreateCommunityScreen({
                 accessibilityRole="radio"
                 accessibilityLabel={i.replace('-outline', '')}
                 accessibilityState={{selected: icon === i}}
-                style={[styles.iconTile, icon === i && {backgroundColor: color, borderColor: color}]}>
-                <Icon name={i} size={24} color={icon === i ? colors.white : colors.primary} />
+                style={[
+                  styles.iconTile,
+                  icon === i && {backgroundColor: color, borderColor: color},
+                ]}>
+                <Icon
+                  name={i}
+                  size={24}
+                  color={icon === i ? colors.white : colors.primary}
+                />
               </Pressable>
             ))}
           </View>
@@ -170,8 +196,14 @@ export default function CreateCommunityScreen({
                 accessibilityRole="radio"
                 accessibilityLabel={`Color ${c}`}
                 accessibilityState={{selected: color === c}}
-                style={[styles.swatch, {backgroundColor: c}, color === c && styles.swatchActive]}>
-                {color === c ? <Icon name="checkmark" size={18} color={colors.white} /> : null}
+                style={[
+                  styles.swatch,
+                  {backgroundColor: c},
+                  color === c && styles.swatchActive,
+                ]}>
+                {color === c ? (
+                  <Icon name="checkmark" size={18} color={colors.white} />
+                ) : null}
               </Pressable>
             ))}
           </View>

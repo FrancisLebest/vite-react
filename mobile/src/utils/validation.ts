@@ -19,10 +19,15 @@ export const validators = {
       ? null
       : '3–30 characters: lowercase letters, numbers, "." or "_".',
   password: (v: string) =>
-    !v ? 'Password is required.' : v.length >= 8 ? null : 'Use at least 8 characters.',
+    !v
+      ? 'Password is required.'
+      : v.length >= 8
+      ? null
+      : 'Use at least 8 characters.',
   name: (v: string) =>
     v.trim().length >= 2 ? null : 'Enter your name (at least 2 characters).',
-  code: (v: string) => (/^\d{6}$/.test(v.trim()) ? null : 'Enter the 6-digit code.'),
+  code: (v: string) =>
+    /^\d{6}$/.test(v.trim()) ? null : 'Enter the 6-digit code.',
 };
 
 export type Errors<K extends string> = Partial<Record<K, string | null>>;

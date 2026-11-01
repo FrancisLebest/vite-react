@@ -20,7 +20,15 @@ import type {
   UsersParams,
 } from '../api/types';
 import {STATIC_CATEGORIES} from '../constants/categories';
-import {isCommunity, isPost, isUser, patchEntities, removeFromPages, restore, Snapshot} from './cache';
+import {
+  isCommunity,
+  isPost,
+  isUser,
+  patchEntities,
+  removeFromPages,
+  restore,
+  Snapshot,
+} from './cache';
 import {qk} from './keys';
 
 /* ------------------------------------------------------------------ */
@@ -100,7 +108,10 @@ export function useCategories() {
 }
 
 export function useTrendingTopics() {
-  return useQuery({queryKey: qk.trendingTopics(), queryFn: api.posts.trendingTopics});
+  return useQuery({
+    queryKey: qk.trendingTopics(),
+    queryFn: api.posts.trendingTopics,
+  });
 }
 
 export function useTrendingHashtags() {
@@ -124,7 +135,9 @@ export function useUniversities(q: string) {
 /* ------------------------------------------------------------------ */
 
 export function useFeed(p: FeedParams, enabled = true) {
-  return useCursorList<Post>(qk.feed(p), cursor => api.posts.feed(p, cursor), {enabled});
+  return useCursorList<Post>(qk.feed(p), cursor => api.posts.feed(p, cursor), {
+    enabled,
+  });
 }
 
 export function usePost(id: string) {
@@ -142,24 +155,39 @@ export function useBookmarks(enabled = true) {
 }
 
 export function useComments(postId: string) {
-  return useCursorList(qk.comments(postId), cursor => api.posts.comments(postId, cursor));
+  return useCursorList(qk.comments(postId), cursor =>
+    api.posts.comments(postId, cursor),
+  );
 }
 
 type PostLike = Pick<Post, 'id' | 'likedByMe'>;
 
 export function useToggleLike() {
   const qc = useQueryClient();
-  return useMutation<{liked: boolean; likeCount: number}, unknown, PostLike, Snapshot>({
-    mutationFn: p => (p.likedByMe ? api.posts.unlike(p.id) : api.posts.like(p.id)),
+  return useMutation<
+    {liked: boolean; likeCount: number},
+    unknown,
+    PostLike,
+    Snapshot
+  >({
+    mutationFn: p =>
+      p.likedByMe ? api.posts.unlike(p.id) : api.posts.like(p.id),
     onMutate: p =>
       patchEntities(qc, isPost(p.id), o => ({
         ...o,
         likedByMe: !p.likedByMe,
-        likeCount: Math.max(0, (o.likeCount as number) + (p.likedByMe ? -1 : 1)),
+        likeCount: Math.max(
+          0,
+          (o.likeCount as number) + (p.likedByMe ? -1 : 1),
+        ),
       })),
     onError: (_e, _p, snap) => restore(qc, snap),
     onSuccess: (res, p) => {
-      patchEntities(qc, isPost(p.id), o => ({...o, likedByMe: res.liked, likeCount: res.likeCount}));
+      patchEntities(qc, isPost(p.id), o => ({
+        ...o,
+        likedByMe: res.liked,
+        likeCount: res.likeCount,
+      }));
     },
   });
 }
@@ -172,12 +200,16 @@ export function useToggleBookmark() {
     Pick<Post, 'id' | 'bookmarkedByMe'>,
     Snapshot
   >({
-    mutationFn: p => (p.bookmarkedByMe ? api.posts.unbookmark(p.id) : api.posts.bookmark(p.id)),
+    mutationFn: p =>
+      p.bookmarkedByMe ? api.posts.unbookmark(p.id) : api.posts.bookmark(p.id),
     onMutate: p =>
       patchEntities(qc, isPost(p.id), o => ({
         ...o,
         bookmarkedByMe: !p.bookmarkedByMe,
-        bookmarkCount: Math.max(0, (o.bookmarkCount as number) + (p.bookmarkedByMe ? -1 : 1)),
+        bookmarkCount: Math.max(
+          0,
+          (o.bookmarkCount as number) + (p.bookmarkedByMe ? -1 : 1),
+        ),
       })),
     onError: (_e, _p, snap) => restore(qc, snap),
     onSuccess: (res, p) => {
@@ -200,7 +232,8 @@ export function useSharePost() {
       const body = post.text ? `"${post.text.slice(0, 140)}"` : '';
       try {
         const res = await Share.share({
-          message: `Check out this ${what} by @${post.author.username} on StudyHub ${body}`.trim(),
+          message:
+            `Check out this ${what} by @${post.author.username} on StudyHub ${body}`.trim(),
         });
         if (res.action === Share.dismissedAction) {
           return;
@@ -253,7 +286,10 @@ export function useUsers(p: UsersParams) {
 }
 
 export function useSuggestedUsers() {
-  return useQuery({queryKey: qk.suggested(), queryFn: () => api.users.suggested(10)});
+  return useQuery({
+    queryKey: qk.suggested(),
+    queryFn: () => api.users.suggested(10),
+  });
 }
 
 export function useToggleFollow() {
@@ -264,12 +300,19 @@ export function useToggleFollow() {
     Pick<UserSummary, 'id' | 'isFollowing'>,
     Snapshot
   >({
-    mutationFn: u => (u.isFollowing ? api.users.unfollow(u.id) : api.users.follow(u.id)),
+    mutationFn: u =>
+      u.isFollowing ? api.users.unfollow(u.id) : api.users.follow(u.id),
     onMutate: u =>
       patchEntities(qc, isUser(u.id), o => {
-        const next: Record<string, unknown> = {...o, isFollowing: !u.isFollowing};
+        const next: Record<string, unknown> = {
+          ...o,
+          isFollowing: !u.isFollowing,
+        };
         if (typeof o.followerCount === 'number') {
-          next.followerCount = Math.max(0, o.followerCount + (u.isFollowing ? -1 : 1));
+          next.followerCount = Math.max(
+            0,
+            o.followerCount + (u.isFollowing ? -1 : 1),
+          );
         }
         return next;
       }),
@@ -277,7 +320,11 @@ export function useToggleFollow() {
     onSuccess: (res, u) => {
       patchEntities(qc, isUser(u.id), o =>
         typeof o.followerCount === 'number'
-          ? {...o, isFollowing: res.isFollowing, followerCount: res.followerCount}
+          ? {
+              ...o,
+              isFollowing: res.isFollowing,
+              followerCount: res.followerCount,
+            }
           : {...o, isFollowing: res.isFollowing},
       );
     },
@@ -293,7 +340,9 @@ export function useToggleFollow() {
 /* ------------------------------------------------------------------ */
 
 export function useCommunities(p: CommunitiesParams) {
-  return useCursorList<Community>(qk.communities(p), cursor => api.communities.list(p, cursor));
+  return useCursorList<Community>(qk.communities(p), cursor =>
+    api.communities.list(p, cursor),
+  );
 }
 
 export function useCommunity(id: string, enabled = true) {
@@ -312,12 +361,16 @@ export function useToggleJoin() {
     Pick<Community, 'id' | 'isMember'>,
     Snapshot
   >({
-    mutationFn: c => (c.isMember ? api.communities.leave(c.id) : api.communities.join(c.id)),
+    mutationFn: c =>
+      c.isMember ? api.communities.leave(c.id) : api.communities.join(c.id),
     onMutate: c =>
       patchEntities(qc, isCommunity(c.id), o => ({
         ...o,
         isMember: !c.isMember,
-        memberCount: Math.max(0, (o.memberCount as number) + (c.isMember ? -1 : 1)),
+        memberCount: Math.max(
+          0,
+          (o.memberCount as number) + (c.isMember ? -1 : 1),
+        ),
       })),
     onError: (_e, _c, snap) => restore(qc, snap),
     onSuccess: (res, c) => {

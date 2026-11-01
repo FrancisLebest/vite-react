@@ -25,7 +25,12 @@ export type RootStackParamList = {
   /* ---- signed in ---- */
   Tabs: NavigatorScreenParams<TabParamList> | undefined;
   Search:
-    | {query?: string; category?: CategoryId; type?: SearchType; openFilters?: boolean}
+    | {
+        query?: string;
+        category?: CategoryId;
+        type?: SearchType;
+        openFilters?: boolean;
+      }
     | undefined;
   Posts: undefined;
   Users: undefined;

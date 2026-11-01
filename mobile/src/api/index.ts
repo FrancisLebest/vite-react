@@ -14,5 +14,11 @@ export const api = createEndpoints(client);
 export * from './types';
 export {ApiClient, buildQuery} from './client';
 export type {TokenStorage} from './client';
-export {ApiError, errorMessage, fieldErrors, isApiError, normalizeError} from './errors';
+export {
+  ApiError,
+  errorMessage,
+  fieldErrors,
+  isApiError,
+  normalizeError,
+} from './errors';
 export {createEndpoints} from './endpoints';

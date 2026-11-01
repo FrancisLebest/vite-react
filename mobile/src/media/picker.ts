@@ -32,20 +32,27 @@ async function ensureCameraPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') {
     return true;
   }
-  const res = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA, {
-    title: 'Camera access',
-    message: 'StudyHub needs the camera to record videos and take photos.',
-    buttonPositive: 'Allow',
-    buttonNegative: 'Not now',
-  });
+  const res = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.CAMERA,
+    {
+      title: 'Camera access',
+      message: 'StudyHub needs the camera to record videos and take photos.',
+      buttonPositive: 'Allow',
+      buttonNegative: 'Not now',
+    },
+  );
   if (res === PermissionsAndroid.RESULTS.GRANTED) {
     return true;
   }
   if (res === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
-    Alert.alert('Camera blocked', 'Enable the camera permission in Settings to continue.', [
-      {text: 'Cancel', style: 'cancel'},
-      {text: 'Open Settings', onPress: () => Linking.openSettings()},
-    ]);
+    Alert.alert(
+      'Camera blocked',
+      'Enable the camera permission in Settings to continue.',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {text: 'Open Settings', onPress: () => Linking.openSettings()},
+      ],
+    );
   }
   return false;
 }
@@ -69,7 +76,10 @@ function guessType(a: Asset, kind: 'image' | 'video'): string {
   return name.endsWith('.png') ? 'image/png' : 'image/jpeg';
 }
 
-function toPicked(res: ImagePickerResponse, kind: 'image' | 'video'): PickedMedia | null {
+function toPicked(
+  res: ImagePickerResponse,
+  kind: 'image' | 'video',
+): PickedMedia | null {
   if (res.didCancel) {
     return null;
   }
@@ -132,20 +142,24 @@ export async function recordVideo(): Promise<PickedMedia | null> {
   return toPicked(await launchCamera(opts), 'video');
 }
 
-export async function pickImage(maxDimension = 1600): Promise<PickedMedia | null> {
+export async function pickImage(
+  maxDimension = 1600,
+): Promise<PickedMedia | null> {
   return toPicked(
     await launchImageLibrary({
       mediaType: 'photo',
       selectionLimit: 1,
       maxWidth: maxDimension,
       maxHeight: maxDimension,
-      quality: 0.85,
+      quality: 0.8,
     }),
     'image',
   );
 }
 
-export async function takePhoto(maxDimension = 1600): Promise<PickedMedia | null> {
+export async function takePhoto(
+  maxDimension = 1600,
+): Promise<PickedMedia | null> {
   if (!(await ensureCameraPermission())) {
     return null;
   }
@@ -154,7 +168,7 @@ export async function takePhoto(maxDimension = 1600): Promise<PickedMedia | null
       mediaType: 'photo',
       maxWidth: maxDimension,
       maxHeight: maxDimension,
-      quality: 0.85,
+      quality: 0.8,
       saveToPhotos: false,
     }),
     'image',

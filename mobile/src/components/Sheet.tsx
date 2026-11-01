@@ -1,9 +1,16 @@
-import React, {createContext, useCallback, useContext, useMemo, useState} from 'react';
+import React, {createContext, useCallback, useContext, useState} from 'react';
 import {Alert, Modal, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {api, errorMessage} from '../api';
 import type {ReportReason, ReportTarget} from '../api/types';
-import {MAX_CONTENT_WIDTH, colors, font, radius, spacing, weight} from '../theme';
+import {
+  MAX_CONTENT_WIDTH,
+  colors,
+  font,
+  radius,
+  spacing,
+  weight,
+} from '../theme';
 import {Icon} from './ui';
 
 export interface SheetOption {
@@ -43,14 +50,17 @@ export function SheetProvider({children}: {children: React.ReactNode}) {
           onPress={close}
           accessibilityLabel="Close menu"
         />
-        <View style={[styles.sheet, {paddingBottom: insets.bottom + spacing.md}]}>
+        <View
+          style={[styles.sheet, {paddingBottom: insets.bottom + spacing.md}]}>
           <View style={styles.handle} />
           {config?.title ? (
             <Text style={styles.title} accessibilityRole="header">
               {config.title}
             </Text>
           ) : null}
-          {config?.message ? <Text style={styles.message}>{config.message}</Text> : null}
+          {config?.message ? (
+            <Text style={styles.message}>{config.message}</Text>
+          ) : null}
           {config?.options.map(o => (
             <Pressable
               key={o.label}
@@ -68,7 +78,11 @@ export function SheetProvider({children}: {children: React.ReactNode}) {
                   color={o.destructive ? colors.danger : colors.text}
                 />
               ) : null}
-              <Text style={[styles.optionText, o.destructive && styles.destructive]}>
+              <Text
+                style={[
+                  styles.optionText,
+                  o.destructive && styles.destructive,
+                ]}>
                 {o.label}
               </Text>
             </Pressable>
@@ -106,7 +120,10 @@ export function useReport() {
             api.reports
               .create(targetType, targetId, r.key)
               .then(() =>
-                Alert.alert('Thanks for letting us know', 'Our moderators will review it.'),
+                Alert.alert(
+                  'Thanks for letting us know',
+                  'Our moderators will review it.',
+                ),
               )
               .catch(e => Alert.alert('Report failed', errorMessage(e))),
         })),
@@ -116,18 +133,17 @@ export function useReport() {
 }
 
 /** Confirm a destructive action with an explicit, named button. */
-export function confirmDestructive(title: string, message: string, action: string) {
+export function confirmDestructive(
+  title: string,
+  message: string,
+  action: string,
+) {
   return new Promise<boolean>(resolve =>
     Alert.alert(title, message, [
       {text: 'Cancel', style: 'cancel', onPress: () => resolve(false)},
       {text: action, style: 'destructive', onPress: () => resolve(true)},
     ]),
   );
-}
-
-export function useSheetMemo(config: SheetConfig) {
-  const open = useSheet();
-  return useMemo(() => () => open(config), [open, config]);
 }
 
 const styles = StyleSheet.create({
@@ -181,5 +197,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelText: {fontSize: font.lg, fontWeight: weight.semibold, color: colors.text},
+  cancelText: {
+    fontSize: font.lg,
+    fontWeight: weight.semibold,
+    color: colors.text,
+  },
 });

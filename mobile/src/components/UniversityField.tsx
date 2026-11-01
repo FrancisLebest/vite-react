@@ -71,5 +71,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   pressed: {backgroundColor: colors.primaryTint},
-  text: {marginLeft: spacing.sm, fontSize: font.md, color: colors.text, flex: 1},
+  text: {
+    marginLeft: spacing.sm,
+    fontSize: font.md,
+    color: colors.text,
+    flex: 1,
+  },
 });

@@ -17,8 +17,15 @@ export const STATIC_CATEGORIES: Category[] = [
   {id: 'other', label: 'Other', icon: 'ellipsis-horizontal-circle-outline'},
 ];
 
-export function categoryLabel(id: CategoryId, list: Category[] = STATIC_CATEGORIES): string {
-  return list.find(c => c.id === id)?.label ?? STATIC_CATEGORIES.find(c => c.id === id)?.label ?? id;
+export function categoryLabel(
+  id: CategoryId,
+  list: Category[] = STATIC_CATEGORIES,
+): string {
+  return (
+    list.find(c => c.id === id)?.label ??
+    STATIC_CATEGORIES.find(c => c.id === id)?.label ??
+    id
+  );
 }
 
 export const COMMUNITY_ICONS = [

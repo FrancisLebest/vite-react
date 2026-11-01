@@ -146,7 +146,9 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
         if (isApiError(e) && (e.status === 401 || e.code === 'UNAUTHORIZED')) {
           await clearSession();
         } else if (!cached) {
-          setBootError(isApiError(e) ? e.message : 'Unable to reach the server.');
+          setBootError(
+            isApiError(e) ? e.message : 'Unable to reach the server.',
+          );
         }
       }
     })();
@@ -158,7 +160,10 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   const onAuth = useCallback(
     async (res: AuthResponse) => {
       qc.clear();
-      await client.setTokens({accessToken: res.accessToken, refreshToken: res.refreshToken});
+      await client.setTokens({
+        accessToken: res.accessToken,
+        refreshToken: res.refreshToken,
+      });
       setMe(res.user);
       setBootError(null);
       setStatus('signedIn');
@@ -215,7 +220,17 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
       setMe,
       refreshMe,
     }),
-    [status, me, bootError, login, register, logout, deleteAccount, setMe, refreshMe],
+    [
+      status,
+      me,
+      bootError,
+      login,
+      register,
+      logout,
+      deleteAccount,
+      setMe,
+      refreshMe,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

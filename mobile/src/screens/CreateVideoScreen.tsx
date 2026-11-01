@@ -33,7 +33,10 @@ import {duration} from '../utils/time';
 
 const MAX_CAPTION = 2000;
 
-export default function CreateVideoScreen({navigation, route}: RootScreenProps<'CreateVideo'>) {
+export default function CreateVideoScreen({
+  navigation,
+  route,
+}: RootScreenProps<'CreateVideo'>) {
   const {categories} = useCategories();
   const create = useCreatePost();
   const focused = useIsFocused();
@@ -41,11 +44,14 @@ export default function CreateVideoScreen({navigation, route}: RootScreenProps<'
   const [video, setVideo] = useState<PickedMedia | null>(null);
   const [caption, setCaption] = useState('');
   const [category, setCategory] = useState<CategoryId>('study-tips');
-  const [communityId, setCommunityId] = useState<string | null>(route.params?.communityId ?? null);
+  const [communityId, setCommunityId] = useState<string | null>(
+    route.params?.communityId ?? null,
+  );
   const [paused, setPaused] = useState(false);
 
   const choose = async (source: 'camera' | 'library') => {
-    const picked = source === 'camera' ? await recordVideo() : await pickVideo();
+    const picked =
+      source === 'camera' ? await recordVideo() : await pickVideo();
     if (picked) {
       setVideo(picked);
       setPaused(false);
@@ -57,7 +63,10 @@ export default function CreateVideoScreen({navigation, route}: RootScreenProps<'
       return;
     }
     if (caption.length > MAX_CAPTION) {
-      Alert.alert('Caption too long', `Keep it under ${MAX_CAPTION} characters.`);
+      Alert.alert(
+        'Caption too long',
+        `Keep it under ${MAX_CAPTION} characters.`,
+      );
       return;
     }
     setPaused(true);
@@ -70,7 +79,8 @@ export default function CreateVideoScreen({navigation, route}: RootScreenProps<'
         media: video,
       },
       {
-        onSuccess: post => navigation.replace('ContentDetail', {postId: post.id}),
+        onSuccess: post =>
+          navigation.replace('ContentDetail', {postId: post.id}),
         onError: e => Alert.alert('Upload failed', errorMessage(e)),
       },
     );
@@ -83,7 +93,11 @@ export default function CreateVideoScreen({navigation, route}: RootScreenProps<'
     if (video) {
       Alert.alert('Discard video?', 'Your video and caption will be lost.', [
         {text: 'Keep editing', style: 'cancel'},
-        {text: 'Discard', style: 'destructive', onPress: () => navigation.goBack()},
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => navigation.goBack(),
+        },
       ]);
     } else {
       navigation.goBack();
@@ -96,7 +110,12 @@ export default function CreateVideoScreen({navigation, route}: RootScreenProps<'
         <IconButton name="close" label="Cancel" onPress={close} />
         <Text style={styles.title}>New Video</Text>
         {video ? (
-          <PillButton small title="Publish" loading={create.isLoading} onPress={publish} />
+          <PillButton
+            small
+            title="Publish"
+            loading={create.isLoading}
+            onPress={publish}
+          />
         ) : (
           <View style={styles.spacer} />
         )}
@@ -127,7 +146,9 @@ export default function CreateVideoScreen({navigation, route}: RootScreenProps<'
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scroll}>
             <Pressable
               onPress={() => setPaused(p => !p)}
               accessibilityRole="button"
@@ -144,7 +165,9 @@ export default function CreateVideoScreen({navigation, route}: RootScreenProps<'
               <Text style={styles.meta}>
                 {[
                   duration(video.durationSec),
-                  video.fileSize ? `${(video.fileSize / 1024 / 1024).toFixed(1)} MB` : null,
+                  video.fileSize
+                    ? `${(video.fileSize / 1024 / 1024).toFixed(1)} MB`
+                    : null,
                 ]
                   .filter(Boolean)
                   .join(' · ')}
@@ -176,7 +199,11 @@ export default function CreateVideoScreen({navigation, route}: RootScreenProps<'
               multiline
               editable={!create.isLoading}
               maxLength={MAX_CAPTION + 50}
-              error={caption.length > MAX_CAPTION ? `Max ${MAX_CAPTION} characters.` : null}
+              error={
+                caption.length > MAX_CAPTION
+                  ? `Max ${MAX_CAPTION} characters.`
+                  : null
+              }
               hint={`${caption.length}/${MAX_CAPTION}`}
             />
             <Text style={styles.label}>Category</Text>
@@ -186,7 +213,9 @@ export default function CreateVideoScreen({navigation, route}: RootScreenProps<'
             value={category}
             onChange={setCategory}
           />
-          <Text style={[styles.label, styles.labelPad]}>Community (optional)</Text>
+          <Text style={[styles.label, styles.labelPad]}>
+            Community (optional)
+          </Text>
           <CommunityPicker value={communityId} onChange={setCommunityId} />
           <View style={styles.footer}>
             <PillButton
@@ -215,7 +244,12 @@ const styles = StyleSheet.create({
   },
   spacer: {width: 70},
   title: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
-  choose: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl},
+  choose: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xxl,
+  },
   chooseTitle: {
     fontSize: font.xl,
     fontWeight: weight.bold,
@@ -240,7 +274,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   meta: {fontSize: font.sm, color: colors.textSecondary},
-  change: {fontSize: font.sm, color: colors.primary, fontWeight: weight.semibold},
+  change: {
+    fontSize: font.sm,
+    color: colors.primary,
+    fontWeight: weight.semibold,
+  },
   progress: {marginTop: spacing.md},
   label: {
     fontSize: font.sm,

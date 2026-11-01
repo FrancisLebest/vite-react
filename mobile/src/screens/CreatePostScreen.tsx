@@ -33,17 +33,25 @@ import {colors, font, radius, spacing, weight} from '../theme';
 
 const MAX = 2000;
 
-export default function CreatePostScreen({navigation, route}: RootScreenProps<'CreatePost'>) {
+export default function CreatePostScreen({
+  navigation,
+  route,
+}: RootScreenProps<'CreatePost'>) {
   const {me} = useAuth();
   const {categories} = useCategories();
   const openSheet = useSheet();
   const create = useCreatePost();
   const [text, setText] = useState('');
   const [category, setCategory] = useState<CategoryId>('study-tips');
-  const [communityId, setCommunityId] = useState<string | null>(route.params?.communityId ?? null);
+  const [communityId, setCommunityId] = useState<string | null>(
+    route.params?.communityId ?? null,
+  );
   const [image, setImage] = useState<PickedMedia | null>(null);
 
-  const canPost = (text.trim().length > 0 || !!image) && text.length <= MAX && !create.isLoading;
+  const canPost =
+    (text.trim().length > 0 || !!image) &&
+    text.length <= MAX &&
+    !create.isLoading;
 
   const publish = () => {
     if (!canPost) {
@@ -58,7 +66,8 @@ export default function CreatePostScreen({navigation, route}: RootScreenProps<'C
         media: image ?? undefined,
       },
       {
-        onSuccess: post => navigation.replace('ContentDetail', {postId: post.id}),
+        onSuccess: post =>
+          navigation.replace('ContentDetail', {postId: post.id}),
         onError: e => Alert.alert("Couldn't publish", errorMessage(e)),
       },
     );
@@ -85,7 +94,11 @@ export default function CreatePostScreen({navigation, route}: RootScreenProps<'C
     if ((text.trim() || image) && !create.isLoading) {
       Alert.alert('Discard post?', 'Your draft will be lost.', [
         {text: 'Keep editing', style: 'cancel'},
-        {text: 'Discard', style: 'destructive', onPress: () => navigation.goBack()},
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => navigation.goBack(),
+        },
       ]);
     } else if (!create.isLoading) {
       navigation.goBack();
@@ -107,18 +120,25 @@ export default function CreatePostScreen({navigation, route}: RootScreenProps<'C
       </View>
       {create.isLoading ? (
         <View style={styles.progress}>
-          <ProgressBar progress={create.progress} label={image ? 'Uploading' : 'Publishing'} />
+          <ProgressBar
+            progress={create.progress}
+            label={image ? 'Uploading' : 'Publishing'}
+          />
         </View>
       ) : null}
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scroll}>
           <View style={styles.author}>
             <Avatar uri={me?.avatarUrl} name={me?.name} size={44} />
             <View style={styles.authorBody}>
               <Text style={styles.name}>{me?.name}</Text>
-              {me?.university ? <Text style={styles.sub}>{me.university}</Text> : null}
+              {me?.university ? (
+                <Text style={styles.sub}>{me.university}</Text>
+              ) : null}
             </View>
           </View>
 
@@ -140,13 +160,18 @@ export default function CreatePostScreen({navigation, route}: RootScreenProps<'C
             textAlignVertical="top"
             underlineColorAndroid="transparent"
           />
-          <Text style={[styles.counter, text.length > MAX && styles.counterError]}>
+          <Text
+            style={[styles.counter, text.length > MAX && styles.counterError]}>
             {text.length}/{MAX}
           </Text>
 
           {image ? (
             <View>
-              <Image source={{uri: image.uri}} style={styles.image} resizeMode="cover" />
+              <Image
+                source={{uri: image.uri}}
+                style={styles.image}
+                resizeMode="cover"
+              />
               <IconButton
                 name="close-circle"
                 label="Remove image"
@@ -165,7 +190,9 @@ export default function CreatePostScreen({navigation, route}: RootScreenProps<'C
           value={category}
           onChange={setCategory}
         />
-        <Text style={[styles.label, styles.labelPad]}>Community (optional)</Text>
+        <Text style={[styles.label, styles.labelPad]}>
+          Community (optional)
+        </Text>
         <CommunityPicker value={communityId} onChange={setCommunityId} />
         <View style={styles.toolbar}>
           <Pressable
@@ -180,7 +207,9 @@ export default function CreatePostScreen({navigation, route}: RootScreenProps<'C
             style={styles.tool}
             accessibilityRole="button"
             accessibilityLabel="Add hashtag"
-            onPress={() => setText(t => `${t}${t.endsWith(' ') || !t ? '' : ' '}#`)}>
+            onPress={() =>
+              setText(t => `${t}${t.endsWith(' ') || !t ? '' : ' '}#`)
+            }>
             <Icon name="pricetag-outline" size={22} color={colors.primary} />
             <Text style={styles.toolText}>Hashtag</Text>
           </Pressable>
@@ -225,7 +254,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
   },
-  counter: {alignSelf: 'flex-end', fontSize: font.xs, color: colors.textMuted, marginTop: 4},
+  counter: {
+    alignSelf: 'flex-end',
+    fontSize: font.xs,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
   counterError: {color: colors.danger},
   image: {
     marginTop: spacing.md,
@@ -243,5 +277,10 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   tool: {flexDirection: 'row', alignItems: 'center', marginRight: spacing.xl},
-  toolText: {marginLeft: 6, color: colors.primary, fontWeight: weight.semibold, fontSize: font.md},
+  toolText: {
+    marginLeft: 6,
+    color: colors.primary,
+    fontWeight: weight.semibold,
+    fontSize: font.md,
+  },
 });

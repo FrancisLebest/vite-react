@@ -54,7 +54,12 @@ export default function ForgotPasswordScreen({
         onSubmitEditing={submit}
       />
       <FormError message={formError} />
-      <PillButton title="Send code" onPress={submit} loading={loading} style={authStyles.submit} />
+      <PillButton
+        title="Send code"
+        onPress={submit}
+        loading={loading}
+        style={authStyles.submit}
+      />
     </AuthLayout>
   );
 }

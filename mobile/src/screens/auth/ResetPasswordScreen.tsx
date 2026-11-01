@@ -34,12 +34,19 @@ export default function ResetPasswordScreen({
     setLoading(true);
     try {
       await api.auth.resetPassword(email, code.trim(), password);
-      Alert.alert('Password updated', 'You can now sign in with your new password.');
-      navigation.reset({index: 1, routes: [{name: 'Welcome'}, {name: 'Login'}]});
+      Alert.alert(
+        'Password updated',
+        'You can now sign in with your new password.',
+      );
+      navigation.reset({
+        index: 1,
+        routes: [{name: 'Welcome'}, {name: 'Login'}],
+      });
     } catch (err) {
       setLoading(false);
       setFormError(
-        isApiError(err) && (err.code === 'VALIDATION_ERROR' || err.status === 400)
+        isApiError(err) &&
+          (err.code === 'VALIDATION_ERROR' || err.status === 400)
           ? 'This code is invalid or has expired.'
           : errorMessage(err),
       );
@@ -53,7 +60,9 @@ export default function ResetPasswordScreen({
       .catch(e => Alert.alert('Error', errorMessage(e)));
 
   return (
-    <AuthLayout title="Reset password" subtitle={`Enter the code sent to ${email}.`}>
+    <AuthLayout
+      title="Reset password"
+      subtitle={`Enter the code sent to ${email}.`}>
       <TextField
         label="6-digit code"
         value={code}
@@ -73,7 +82,9 @@ export default function ResetPasswordScreen({
           setPassword(v);
           setErrors(e => ({...e, password: null}));
         }}
-        onBlur={() => setErrors(e => ({...e, password: validators.password(password)}))}
+        onBlur={() =>
+          setErrors(e => ({...e, password: validators.password(password)}))
+        }
         error={errors.password}
         secure
         textContentType="newPassword"

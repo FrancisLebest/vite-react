@@ -1,5 +1,12 @@
 import React, {useMemo, useState} from 'react';
-import {FlatList, Pressable, RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {errorMessage} from '../api';
 import type {AppNotification, Conversation} from '../api/types';
@@ -76,16 +83,25 @@ export default function InboxScreen({navigation}: TabScreenProps<'Inbox'>) {
                 n.text.toLowerCase().includes(q) ||
                 n.actor.name.toLowerCase().includes(q),
             )
-            .map(n => ({type: 'notification', id: `n-${n.id}`, item: n, ts: toMs(n.createdAt)}));
+            .map(n => ({
+              type: 'notification',
+              id: `n-${n.id}`,
+              item: n,
+              ts: toMs(n.createdAt),
+            }));
     return [...convs, ...notifs].sort((a, b) => b.ts - a.ts);
   }, [conversations.items, notifications.items, filter, query]);
 
   const loading =
-    (filter === 'all' && (conversations.isLoading || notifications.isLoading)) ||
+    (filter === 'all' &&
+      (conversations.isLoading || notifications.isLoading)) ||
     (filter === 'messages' && conversations.isLoading) ||
-    ((filter === 'notifications' || filter === 'mentions') && notifications.isLoading);
+    ((filter === 'notifications' || filter === 'mentions') &&
+      notifications.isLoading);
   const error =
-    filter === 'messages' || filter === 'all' ? conversations.error : notifications.error;
+    filter === 'messages' || filter === 'all'
+      ? conversations.error
+      : notifications.error;
 
   const loadMore = () => {
     if (filter !== 'notifications' && filter !== 'mentions') {
@@ -145,7 +161,10 @@ export default function InboxScreen({navigation}: TabScreenProps<'Inbox'>) {
         ]}
         value={filter}
         onChange={setFilter}
-        badges={{messages: unread.conversations, notifications: unread.notifications}}
+        badges={{
+          messages: unread.conversations,
+          notifications: unread.notifications,
+        }}
         style={styles.chips}
       />
       <FlatList
@@ -171,7 +190,12 @@ export default function InboxScreen({navigation}: TabScreenProps<'Inbox'>) {
           )
         }
         ListFooterComponent={
-          <ListFooter loading={conversations.isFetchingNextPage || notifications.isFetchingNextPage} />
+          <ListFooter
+            loading={
+              conversations.isFetchingNextPage ||
+              notifications.isFetchingNextPage
+            }
+          />
         }
         ListEmptyComponent={
           loading ? (
@@ -191,7 +215,10 @@ export default function InboxScreen({navigation}: TabScreenProps<'Inbox'>) {
               }
               action={
                 !query && (filter === 'messages' || filter === 'all')
-                  ? {label: 'New message', onPress: () => navigation.navigate('NewMessage')}
+                  ? {
+                      label: 'New message',
+                      onPress: () => navigation.navigate('NewMessage'),
+                    }
                   : undefined
               }
             />
@@ -207,11 +234,15 @@ function ConversationRow({conversation: c}: {conversation: Conversation}) {
   const {navigate} = useNavigation();
   const openSheet = useSheet();
   const mute = useMuteConversation();
-  const other = !c.isGroup ? c.participants.find(p => p.id !== me?.id) : undefined;
+  const other = !c.isGroup
+    ? c.participants.find(p => p.id !== me?.id)
+    : undefined;
   const last = c.lastMessage;
   const unread = c.unreadCount > 0;
   const fromMe = last?.sender.id === me?.id;
-  const preview = last ? (last.text || (last.media ? '📷 Photo' : '')) : 'No messages yet';
+  const preview = last
+    ? last.text || (last.media ? '📷 Photo' : '')
+    : 'No messages yet';
 
   return (
     <Pressable
@@ -222,20 +253,32 @@ function ConversationRow({conversation: c}: {conversation: Conversation}) {
           options: [
             {
               label: c.muted ? 'Unmute conversation' : 'Mute conversation',
-              icon: c.muted ? 'notifications-outline' : 'notifications-off-outline',
+              icon: c.muted
+                ? 'notifications-outline'
+                : 'notifications-off-outline',
               onPress: () => mute.mutate({id: c.id, muted: !c.muted}),
             },
           ],
         })
       }
       accessibilityRole="button"
-      accessibilityLabel={`${c.title}${unread ? `, ${c.unreadCount} unread` : ''}`}
+      accessibilityLabel={`${c.title}${
+        unread ? `, ${c.unreadCount} unread` : ''
+      }`}
       accessibilityHint="Long press for options"
-      style={({pressed}) => [styles.row, unread && styles.rowUnread, pressed && styles.pressed]}>
+      style={({pressed}) => [
+        styles.row,
+        unread && styles.rowUnread,
+        pressed && styles.pressed,
+      ]}>
       {c.isGroup && !c.avatarUrl ? (
         <IconAvatar name="people" size={52} filled />
       ) : (
-        <Avatar uri={c.avatarUrl ?? other?.avatarUrl} name={c.title} size={52} />
+        <Avatar
+          uri={c.avatarUrl ?? other?.avatarUrl}
+          name={c.title}
+          size={52}
+        />
       )}
       <View style={styles.body}>
         <View style={styles.titleRow}>
@@ -244,8 +287,14 @@ function ConversationRow({conversation: c}: {conversation: Conversation}) {
           </Text>
           {other?.verified ? <VerifiedBadge /> : null}
         </View>
-        <Text style={[styles.preview, unread && styles.previewUnread]} numberOfLines={1}>
-          {fromMe ? 'You: ' : c.isGroup && last ? `${last.sender.name.split(' ')[0]}: ` : ''}
+        <Text
+          style={[styles.preview, unread && styles.previewUnread]}
+          numberOfLines={1}>
+          {fromMe
+            ? 'You: '
+            : c.isGroup && last
+            ? `${last.sender.name.split(' ')[0]}: `
+            : ''}
           {preview}
         </Text>
       </View>
@@ -255,7 +304,11 @@ function ConversationRow({conversation: c}: {conversation: Conversation}) {
           {unread ? (
             <Badge count={c.unreadCount} style={styles.unreadBadge} />
           ) : c.muted ? (
-            <Icon name="notifications-off-outline" size={16} color={colors.textMuted} />
+            <Icon
+              name="notifications-off-outline"
+              size={16}
+              color={colors.textMuted}
+            />
           ) : null}
         </View>
       </View>

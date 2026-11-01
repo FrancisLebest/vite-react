@@ -13,7 +13,9 @@ import {AuthLayout, FormError, authStyles} from './AuthLayout';
 
 type Field = 'name' | 'username' | 'email' | 'password';
 
-export default function RegisterScreen({navigation}: RootScreenProps<'Register'>) {
+export default function RegisterScreen({
+  navigation,
+}: RootScreenProps<'Register'>) {
   const {register} = useAuth();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -63,7 +65,9 @@ export default function RegisterScreen({navigation}: RootScreenProps<'Register'>
           setErrors(prev => ({...prev, ...fields}));
         }
         setFormError(
-          err.code === 'CONFLICT'
+          Object.keys(fields).length
+            ? null
+            : err.code === 'CONFLICT'
             ? 'This email or username is already taken.'
             : err.message,
         );
@@ -74,7 +78,9 @@ export default function RegisterScreen({navigation}: RootScreenProps<'Register'>
   };
 
   return (
-    <AuthLayout title="Create your account" subtitle="Join students from your university.">
+    <AuthLayout
+      title="Create your account"
+      subtitle="Join students from your university.">
       <TextField
         label="Full name"
         value={name}
@@ -136,7 +142,9 @@ export default function RegisterScreen({navigation}: RootScreenProps<'Register'>
       />
       <View style={authStyles.linkRow}>
         <Text style={authStyles.linkMuted}>Already registered? </Text>
-        <Pressable accessibilityRole="link" onPress={() => navigation.replace('Login')}>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => navigation.replace('Login')}>
           <Text style={authStyles.link}>Sign in</Text>
         </Pressable>
       </View>

@@ -45,7 +45,9 @@ const SHORTCUTS = [
   {key: 'Communities', label: 'Communities', icon: 'school-outline'},
 ] as const;
 
-export default function DiscoverScreen({navigation}: TabScreenProps<'Discover'>) {
+export default function DiscoverScreen({
+  navigation,
+}: TabScreenProps<'Discover'>) {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<Filter>('all');
   const {contentWidth, gridColumns} = useResponsive();
@@ -114,7 +116,10 @@ export default function DiscoverScreen({navigation}: TabScreenProps<'Discover'>)
             <Pressable
               key={s.key}
               onPress={() => navigation.navigate(s.key)}
-              style={({pressed}) => [styles.shortcut, pressed && styles.pressed]}
+              style={({pressed}) => [
+                styles.shortcut,
+                pressed && styles.pressed,
+              ]}
               accessibilityRole="button">
               <Icon name={s.icon} size={20} color={colors.primary} />
               <Text style={styles.shortcutText}>{s.label}</Text>
@@ -145,7 +150,9 @@ export default function DiscoverScreen({navigation}: TabScreenProps<'Discover'>)
                 <Text style={styles.topicLabel} numberOfLines={2}>
                   {t.label}
                 </Text>
-                <Text style={styles.topicCount}>{formatCount(t.postCount)} posts</Text>
+                <Text style={styles.topicCount}>
+                  {formatCount(t.postCount)} posts
+                </Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -157,7 +164,10 @@ export default function DiscoverScreen({navigation}: TabScreenProps<'Discover'>)
         {popular.isLoading ? (
           <ActivityIndicator color={colors.primary} style={styles.loader} />
         ) : popular.isError ? (
-          <ErrorState message={errorMessage(popular.error)} onRetry={() => popular.refetch()} />
+          <ErrorState
+            message={errorMessage(popular.error)}
+            onRetry={() => popular.refetch()}
+          />
         ) : popular.items.length ? (
           popular.items.slice(0, 6).map(c => <ContentRow key={c.id} item={c} />)
         ) : (
@@ -165,13 +175,20 @@ export default function DiscoverScreen({navigation}: TabScreenProps<'Discover'>)
             icon="search-outline"
             title="Nothing here yet"
             message="No popular content in this category. Try another one."
-            action={filter !== 'all' ? {label: 'Show all', onPress: () => setFilter('all')} : undefined}
+            action={
+              filter !== 'all'
+                ? {label: 'Show all', onPress: () => setFilter('all')}
+                : undefined
+            }
           />
         )}
 
         {suggested.data?.length ? (
           <>
-            <SectionHeader title="Suggested for you" onSeeAll={() => navigation.navigate('Users')} />
+            <SectionHeader
+              title="Suggested for you"
+              onSeeAll={() => navigation.navigate('Users')}
+            />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -203,7 +220,10 @@ export default function DiscoverScreen({navigation}: TabScreenProps<'Discover'>)
 
 function InlineRetry({onRetry}: {onRetry: () => void}) {
   return (
-    <Pressable onPress={onRetry} accessibilityRole="button" style={styles.inlineRetry}>
+    <Pressable
+      onPress={onRetry}
+      accessibilityRole="button"
+      style={styles.inlineRetry}>
       <Icon name="refresh" size={16} color={colors.primary} />
       <Text style={styles.inlineRetryText}>Couldn't load. Tap to retry.</Text>
     </Pressable>
@@ -229,7 +249,10 @@ function SuggestedUserCard({user}: {user: UserSummary}) {
       <Text style={styles.userSub} numberOfLines={1}>
         {user.university ?? `@${user.username}`}
       </Text>
-      <FollowButton following={user.isFollowing} onPress={() => follow.mutate(user)} />
+      <FollowButton
+        following={user.isFollowing}
+        onPress={() => follow.mutate(user)}
+      />
     </Pressable>
   );
 }
@@ -254,11 +277,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginHorizontal: spacing.md,
   },
-  searchPlaceholder: {color: colors.textMuted, fontSize: font.md, marginLeft: spacing.sm, flex: 1},
+  searchPlaceholder: {
+    color: colors.textMuted,
+    fontSize: font.md,
+    marginLeft: spacing.sm,
+    flex: 1,
+  },
   scroll: {paddingBottom: spacing.xxl},
   loader: {marginVertical: spacing.lg},
-  muted: {color: colors.textSecondary, paddingHorizontal: spacing.lg, fontSize: font.sm},
-  shortcuts: {flexDirection: 'row', paddingHorizontal: spacing.lg, marginTop: spacing.md},
+  muted: {
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.lg,
+    fontSize: font.sm,
+  },
+  shortcuts: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
   shortcut: {
     flex: 1,
     flexDirection: 'row',
@@ -287,10 +323,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  topicLabel: {fontSize: font.xs, color: colors.text, marginTop: 6, textAlign: 'center'},
+  topicLabel: {
+    fontSize: font.xs,
+    color: colors.text,
+    marginTop: 6,
+    textAlign: 'center',
+  },
   topicCount: {fontSize: 10, color: colors.textMuted, marginTop: 2},
-  inlineRetry: {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg},
-  inlineRetryText: {color: colors.primary, marginLeft: spacing.xs, fontSize: font.sm},
+  inlineRetry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  inlineRetryText: {
+    color: colors.primary,
+    marginLeft: spacing.xs,
+    fontSize: font.sm,
+  },
   userCard: {
     width: 140,
     alignItems: 'center',
@@ -310,7 +359,11 @@ const styles = StyleSheet.create({
     marginRight: 2,
     flexShrink: 1,
   },
-  userSub: {fontSize: font.xs, color: colors.textSecondary, marginVertical: spacing.xs},
+  userSub: {
+    fontSize: font.xs,
+    color: colors.textSecondary,
+    marginVertical: spacing.xs,
+  },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -331,6 +384,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bannerBody: {flex: 1, marginHorizontal: spacing.md},
-  bannerTitle: {fontSize: font.md, fontWeight: weight.bold, color: colors.primary},
+  bannerTitle: {
+    fontSize: font.md,
+    fontWeight: weight.bold,
+    color: colors.primary,
+  },
   bannerSub: {fontSize: font.xs, color: colors.textSecondary, marginTop: 2},
 });

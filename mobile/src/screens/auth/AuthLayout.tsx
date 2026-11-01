@@ -77,7 +77,11 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginTop: spacing.md,
   },
-  subtitle: {fontSize: font.md, color: colors.textSecondary, marginTop: spacing.xs},
+  subtitle: {
+    fontSize: font.md,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
   formError: {
     marginTop: spacing.md,
     padding: spacing.md,
