@@ -1,0 +1,8 @@
+{
+  "extends": "@tsconfig/react-native/tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true
+  },
+  "include": ["App.tsx", "src", "__tests__"],
+  "exclude": ["node_modules"]
+}

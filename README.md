@@ -19,3 +19,8 @@ You can deploy your new Vite project with a single command from your terminal us
 ```shell
 $ vercel
 ```
+
+## Application mobile
+
+Le dossier [`mobile/`](mobile/README.md) contient **StudyHub**, l'application mobile React Native
+(Android 7+ / iOS 12.4+) du réseau social étudiant. Voir `mobile/README.md` pour l'installation.
