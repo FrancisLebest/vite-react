@@ -35,11 +35,19 @@ export function createFetchMock(routes: Record<string, Handler>) {
     calls.push(req);
     const handler = routes[`${method} ${path}`];
     if (!handler) {
-      return response({status: 404, body: {error: {code: 'NOT_FOUND', message: `No mock for ${method} ${path}`}}});
+      return response({
+        status: 404,
+        body: {
+          error: {code: 'NOT_FOUND', message: `No mock for ${method} ${path}`},
+        },
+      });
     }
     return response(await handler(req));
   });
   return {fetch: fn as unknown as typeof fetch, calls};
 }
 
-export const page = <T,>(items: T[], nextCursor: string | null = null) => ({items, nextCursor});
+export const page = <T>(items: T[], nextCursor: string | null = null) => ({
+  items,
+  nextCursor,
+});

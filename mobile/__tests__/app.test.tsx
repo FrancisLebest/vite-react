@@ -1,5 +1,11 @@
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react-native';
 import {QueryClient} from '@tanstack/react-query';
 import * as Keychain from 'react-native-keychain';
 import App from '../App';
@@ -7,28 +13,61 @@ import {client} from '../src/api';
 import {createFetchMock, Handler, page} from './helpers/fetchMock';
 import {me, summary, videoPost} from './helpers/fixtures';
 
-const keychainStore = (Keychain as unknown as {__store: Map<string, {password: string}>}).__store;
+const keychainStore = (
+  Keychain as unknown as {__store: Map<string, {password: string}>}
+).__store;
 const SERVICE = 'com.studyhub.auth';
 
+const clients: QueryClient[] = [];
 function newQueryClient() {
-  return new QueryClient({
-    defaultOptions: {queries: {retry: false, cacheTime: Infinity}, mutations: {retry: false}},
+  const qc = new QueryClient({
+    defaultOptions: {
+      queries: {retry: false, cacheTime: Infinity},
+      // no 5-minute GC timers left behind after the test
+      mutations: {retry: false, cacheTime: 0},
+    },
   });
+  clients.push(qc);
+  return qc;
 }
+
+afterEach(() => {
+  clients.splice(0).forEach(qc => qc.clear());
+});
 
 const signedInRoutes: Record<string, Handler> = {
   'GET /auth/me': () => ({body: me}),
   'GET /feed': req =>
     req.query.get('type') === 'video'
       ? {body: page([videoPost()])}
-      : {body: page([videoPost({id: 'p2', type: 'post', media: null, text: 'Popular notes'})])},
+      : {
+          body: page([
+            videoPost({
+              id: 'p2',
+              type: 'post',
+              media: null,
+              text: 'Popular notes',
+            }),
+          ]),
+        },
   'GET /conversations/unread-count': () => ({body: {count: 2}}),
   'GET /notifications/unread-count': () => ({body: {count: 5}}),
-  'GET /categories': () => ({body: [{id: 'math', label: 'Math', icon: 'calculator-outline'}]}),
-  'GET /trending/topics': () => ({
-    body: [{id: 'math', label: 'Mathematics', icon: 'calculator-outline', postCount: 12}],
+  'GET /categories': () => ({
+    body: [{id: 'math', label: 'Math', icon: 'calculator-outline'}],
   }),
-  'GET /users/suggested': () => ({body: [summary({id: 'u3', name: 'Omar Said'})]}),
+  'GET /trending/topics': () => ({
+    body: [
+      {
+        id: 'math',
+        label: 'Mathematics',
+        icon: 'calculator-outline',
+        postCount: 12,
+      },
+    ],
+  }),
+  'GET /users/suggested': () => ({
+    body: [summary({id: 'u3', name: 'Omar Said'})],
+  }),
   'POST /posts/p1/like': () => ({body: {liked: true, likeCount: 11}}),
   'POST /posts/p1/view': () => ({status: 204}),
 };
@@ -48,9 +87,11 @@ beforeEach(async () => {
 describe('auth flow', () => {
   it('shows the welcome screen when no session is stored', async () => {
     const {fetch} = createFetchMock({});
-    global.fetch = fetch;
+    globalThis.fetch = fetch;
     render(<App queryClient={newQueryClient()} />);
-    expect(await screen.findByText('Learn together. Share smarter.')).toBeTruthy();
+    expect(
+      await screen.findByText('Learn together. Share smarter.'),
+    ).toBeTruthy();
     expect(screen.getByText('I already have an account')).toBeTruthy();
   });
 
@@ -61,23 +102,32 @@ describe('auth flow', () => {
         const body = req.body as {identifier: string; password: string};
         return body.password === 'secret123'
           ? {body: {user: me, accessToken: 'A1', refreshToken: 'R1'}}
-          : {status: 401, body: {error: {code: 'UNAUTHORIZED', message: 'Invalid credentials'}}};
+          : {
+              status: 401,
+              body: {
+                error: {code: 'UNAUTHORIZED', message: 'Invalid credentials'},
+              },
+            };
       },
     });
-    global.fetch = fetch;
+    globalThis.fetch = fetch;
     render(<App queryClient={newQueryClient()} />);
     fireEvent.press(await screen.findByText('I already have an account'));
 
     // Empty submit → inline errors, no request.
     fireEvent.press(await screen.findByText('Sign in'));
-    expect(await screen.findByText('Email or username is required.')).toBeTruthy();
+    expect(
+      await screen.findByText('Email or username is required.'),
+    ).toBeTruthy();
     expect(screen.getByText('Password is required.')).toBeTruthy();
     expect(calls.some(c => c.path === '/auth/login')).toBe(false);
 
     fireEvent.changeText(screen.getByLabelText('Email or username'), 'youssef');
     fireEvent.changeText(screen.getByLabelText('Password'), 'wrong');
     fireEvent.press(screen.getByText('Sign in'));
-    expect(await screen.findByText('Incorrect email/username or password.')).toBeTruthy();
+    expect(
+      await screen.findByText('Incorrect email/username or password.'),
+    ).toBeTruthy();
 
     fireEvent.changeText(screen.getByLabelText('Password'), 'secret123');
     fireEvent.press(screen.getByText('Sign in'));
@@ -95,12 +145,20 @@ describe('auth flow', () => {
   it('restores the session from the Keychain and logs out when the refresh token is rejected', async () => {
     await signIn();
     const {fetch} = createFetchMock({
-      'GET /auth/me': () => ({status: 401, body: {error: {code: 'UNAUTHORIZED', message: 'expired'}}}),
-      'POST /auth/refresh': () => ({status: 401, body: {error: {code: 'UNAUTHORIZED', message: 'revoked'}}}),
+      'GET /auth/me': () => ({
+        status: 401,
+        body: {error: {code: 'UNAUTHORIZED', message: 'expired'}},
+      }),
+      'POST /auth/refresh': () => ({
+        status: 401,
+        body: {error: {code: 'UNAUTHORIZED', message: 'revoked'}},
+      }),
     });
-    global.fetch = fetch;
+    globalThis.fetch = fetch;
     render(<App queryClient={newQueryClient()} />);
-    expect(await screen.findByText('Learn together. Share smarter.')).toBeTruthy();
+    expect(
+      await screen.findByText('Learn together. Share smarter.'),
+    ).toBeTruthy();
     expect(keychainStore.has(SERVICE)).toBe(false);
   });
 });
@@ -116,7 +174,7 @@ describe('signed-in screens', () => {
           resolveLike = () => r({body: {liked: true, likeCount: 11}});
         }),
     });
-    global.fetch = fetch;
+    globalThis.fetch = fetch;
     render(<App queryClient={newQueryClient()} />);
     expect(await screen.findByText('Derivatives in 60 seconds')).toBeTruthy();
     expect(screen.getByText('@sarah')).toBeTruthy();
@@ -131,16 +189,21 @@ describe('signed-in screens', () => {
     expect(await screen.findByLabelText('Unlike')).toBeTruthy();
     expect(screen.getByText('11')).toBeTruthy();
     await act(async () => resolveLike(null));
-    expect(calls.some(c => c.method === 'POST' && c.path === '/posts/p1/like')).toBe(true);
+    expect(
+      calls.some(c => c.method === 'POST' && c.path === '/posts/p1/like'),
+    ).toBe(true);
   });
 
   it('rolls back an optimistic like when the request fails', async () => {
     await signIn();
     const {fetch} = createFetchMock({
       ...signedInRoutes,
-      'POST /posts/p1/like': () => ({status: 500, body: {error: {code: 'INTERNAL', message: 'x'}}}),
+      'POST /posts/p1/like': () => ({
+        status: 500,
+        body: {error: {code: 'INTERNAL', message: 'x'}},
+      }),
     });
-    global.fetch = fetch;
+    globalThis.fetch = fetch;
     render(<App queryClient={newQueryClient()} />);
     fireEvent.press(await screen.findByLabelText('Like'));
     await waitFor(() => expect(screen.getByLabelText('Like')).toBeTruthy());
@@ -150,7 +213,7 @@ describe('signed-in screens', () => {
   it('shows trending topics and suggested users from the API on Discover', async () => {
     await signIn();
     const {fetch} = createFetchMock(signedInRoutes);
-    global.fetch = fetch;
+    globalThis.fetch = fetch;
     render(<App queryClient={newQueryClient()} />);
     await screen.findByText('Derivatives in 60 seconds');
     fireEvent.press(screen.getByText('Discover'));
@@ -167,10 +230,15 @@ describe('signed-in screens', () => {
       ...signedInRoutes,
       'GET /feed': () =>
         fail
-          ? {status: 503, body: {error: {code: 'INTERNAL', message: 'Database unavailable'}}}
+          ? {
+              status: 503,
+              body: {
+                error: {code: 'INTERNAL', message: 'Database unavailable'},
+              },
+            }
           : {body: page([videoPost()])},
     });
-    global.fetch = fetch;
+    globalThis.fetch = fetch;
     render(<App queryClient={newQueryClient()} />);
     expect(await screen.findByText('Database unavailable')).toBeTruthy();
     fail = false;

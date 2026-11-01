@@ -26,6 +26,10 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
+		<!-- Development only: allows http:// to localhost and LAN addresses (*.local, 192.168.x.x).
+		     Production must use an HTTPS API URL (see README). -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
 			<key>localhost</key>
@@ -35,14 +39,18 @@
 			</dict>
 		</dict>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<key>NSCameraUsageDescription</key>
+	<string>StudyHub uses the camera to record study videos and take photos for your posts and profile.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>StudyHub uses the microphone to record sound with your videos.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Ionicons.ttf</string>
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>StudyHub needs access to your photos to share images in posts.</string>
+	<string>StudyHub needs access to your photos and videos to share them in posts, messages and your profile.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>StudyHub can save the videos you record to your photo library.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

@@ -58,5 +58,16 @@ target 'StudyHub' do
       :mac_catalyst_enabled => false
     )
     __apply_Xcode_12_5_M1_post_install_workaround(installer)
+
+    # Some pods declare old deployment targets (react-native-video: 8.0,
+    # keychain / image-picker / async-storage: 9.0). Xcode 14.3+ no longer ships
+    # libarclite for targets < 11, so align every pod on the app minimum (12.4).
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 12.4
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.4'
+        end
+      end
+    end
   end
 end

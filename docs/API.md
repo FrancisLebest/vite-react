@@ -176,3 +176,271 @@ Category = { id: CategoryId, label: string, icon: string /* Ionicons */ }
 - Unliking / unfollowing / leaving removes the corresponding notification; deleting a comment or post removes notifications attached to it.
 - Ranked lists (`forYou`, `sort=popular`, search, directory `sort=popular`) use opaque offset cursors (max offset 10 000); chronological lists use keyset cursors.
 - `GET /universities` is public (sign-up screen) and returns at most 50 names.
+
+---
+
+## v1.1 — Advanced features
+
+Everything below is **additive**: existing fields, endpoints and events keep their meaning. Clients must ignore unknown fields and unknown notification `type` values. All endpoints require a Bearer token unless stated otherwise. Paths are relative to `/api/v1`.
+
+### New / extended error codes
+
+- `ACCOUNT_SUSPENDED` (HTTP 403): returned by `POST /auth/login`, `POST /auth/refresh`, every authenticated request and the Socket.IO handshake (`connect_error` message `ACCOUNT_SUSPENDED`) when the account is suspended. `details` = `{ reason: string | null }`.
+- Content filter (when `CONTENT_FILTER=reject`): `400 VALIDATION_ERROR` with `details` = `[{ path: '<field>', message: 'Contains blocked words', code: 'blocked_words' }]`. In the default `mask` mode, blocked words are silently replaced by `*` characters instead. The filter applies to post text, comments, messages, bios, names, community name/description, series title/description and event title/description.
+
+### Extended shared objects (new fields only)
+
+```ts
+type FollowStatus = 'none' | 'requested' | 'following';
+type PostStatus = 'processing' | 'ready' | 'failed';
+
+UserSummary += {
+  followStatus: FollowStatus,   // viewer → this user. isFollowing === (followStatus === 'following')
+  isPrivate: boolean,
+}
+User += {
+  isAdmin: boolean,
+  canMessage: boolean,          // whether the viewer may open/continue a DM with this user (blocks + their dmPolicy). false for yourself
+  pinnedPostIds: string[],      // max 3, in pin order
+}
+Me += {
+  emailVerified: boolean,
+  interests: CategoryId[],
+}
+
+Media.kind/url unchanged. While a video post is `processing`, `media.url` points to the original upload and `thumbnailUrl` to a quick preview frame (both replaced once ready).
+
+Poll = {
+  id,
+  kind: 'poll' | 'quiz',
+  question: string | null,
+  options: { id: string, text: string, voteCount: number | null }[],  // voteCount null until the viewer voted (the post author always sees counts)
+  totalVotes: number | null,                                         // same visibility rule as voteCount
+  myVoteOptionId: string | null,
+  correctOptionId: string | null,   // quiz only, and only after the viewer voted (author always sees it). Always null for kind='poll'
+  isCorrect: boolean | null,        // quiz only, after voting
+}
+
+SeriesRef = { id, title, position: number /* 1-based */, total: number, prevPostId: string | null, nextPostId: string | null }
+
+Post += {
+  status: PostStatus,               // non-authors only ever receive 'ready' posts
+  editedAt: string | null,
+  poll: Poll | null,
+  series: SeriesRef | null,
+  repostCount: number,
+  repostedByMe: boolean,
+  repostedBy: UserSummary | null,   // set only on feed items that appear because someone you follow reposted it (following feed)
+  isPinned: boolean,                // pinned on its author's profile
+  pinnedCommentId: string | null,
+}
+
+PostSummary = { id, type: 'video' | 'post', text: string /* ≤ 200 chars */, thumbnailUrl: string | null, author: UserSummary }
+
+Comment += {
+  parentId: string | null,          // null = top-level comment
+  replyCount: number,               // top-level comments only (0 for replies)
+  likeCount: number,
+  likedByMe: boolean,
+  isPinned: boolean,
+}
+
+Message += { post: PostSummary | null }   // a shared post; null if none or no longer visible to the viewer
+
+Notification.type += 'reply' | 'comment_like' | 'follow_request' | 'follow_accepted' | 'repost' | 'event' | 'verification'
+Notification += {
+  comment: { id, text } | null,
+  event: { id, title, startsAt } | null,
+}
+
+Settings = {
+  isPrivate: boolean,
+  dmPolicy: 'everyone' | 'followers' | 'nobody',   // 'followers' = only users who follow me may DM me
+  notifications: {
+    push: boolean,            // master switch for push only
+    likes: boolean,           // like + comment_like + repost
+    comments: boolean,        // comment
+    replies: boolean,         // reply
+    follows: boolean,         // follow + follow_accepted
+    followRequests: boolean,  // follow_request
+    mentions: boolean,        // mention
+    messages: boolean,        // push for new messages (there is no in-app notification for messages)
+    communityJoins: boolean,  // community_join
+    events: boolean,          // event
+  }
+}
+// A disabled preference suppresses BOTH the in-app notification and the push for those types.
+// Defaults: everything true, isPrivate false, dmPolicy 'everyone'.
+
+Series = {
+  id, title: string, description: string, coverUrl: string | null, category: CategoryId,
+  author: UserSummary, itemCount: number, followerCount: number, isFollowing: boolean, isOwner: boolean,
+  createdAt, updatedAt
+}
+SeriesDetail = Series & { items: Post[] }   // ordered by position; non-owners only see 'ready' posts
+
+Event = {
+  id, community: { id, name }, title: string, description: string,
+  startsAt: string, endsAt: string | null, location: string | null, onlineUrl: string | null,
+  creator: UserSummary, goingCount: number, myRsvp: 'going' | 'not_going' | null,
+  canEdit: boolean,           // creator or community owner
+  createdAt
+}
+
+FollowRequest = { user: UserSummary, createdAt }
+
+Report = {
+  id, targetType, targetId, reason, details: string | null, status: 'open' | 'reviewed' | 'dismissed',
+  reporter: UserSummary | null, targetPreview: string | null /* text excerpt / name */, targetAuthor: UserSummary | null,
+  resolution: 'none' | 'content_removed' | 'user_suspended' | null, note: string | null,
+  resolvedBy: UserSummary | null, resolvedAt: string | null, createdAt
+}
+
+VerificationRequest = { id, user: UserSummary, message: string | null, status: 'pending' | 'approved' | 'rejected', createdAt, decidedAt: string | null }
+```
+
+### 1. Video processing pipeline
+
+- `POST /posts` with a video now returns `201 Post` with `status: 'processing'` (unless the server runs with `VIDEO_TRANSCODE=false`, in which case it is `'ready'` immediately, v1 behaviour).
+- A background job transcodes to H.264 High / AAC 128 kb/s MP4, max 720p (shorter side ≤ 720 px), `+faststart`, then regenerates the thumbnail, duration and dimensions.
+- While `processing` (or `failed`), the post is visible **only to its author** (feed, profile, detail, search…). Likes/comments etc. on it return `404` for other users.
+- Socket events to the author (`user:<authorId>` room):
+  - `post:ready` `{ post: Post }`
+  - `post:failed` `{ postId: string, reason: string }`
+- A `failed` post can be deleted by its author (`DELETE /posts/:id`); there is no retry endpoint.
+
+### 2. Push notifications
+
+- Register the device token with the existing `POST /users/me/push-token` `{ token, platform }` (FCM registration token on both platforms; iOS goes through APNs-via-FCM). `DELETE /users/me/push-token` `{ token }` → `204` (call on logout).
+- Sent for: like, comment, reply, comment like, follow, follow request, follow accepted, mention, repost, community join, event, new message (not when the conversation is muted, nor to the sender).
+- FCM payload: `notification: { title, body }` and `data` (all strings): `{ type, notificationId?, postId?, commentId?, conversationId?, communityId?, eventId?, actorId? }`. `type` is the notification type, or `'message'` for messages.
+- Invalid/unregistered tokens are deleted automatically.
+
+### 3. Comments v2
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/posts/:id/comments` | body `{ text (1..1000), parentId? }`. A reply to a reply is attached to its top-level parent (one level). Notifies the post author (`comment`), the parent comment author (`reply`) and `@mentions` (`mention`) → `201 Comment` |
+| GET | `/posts/:id/comments?cursor` | **top-level comments only**: pinned comment first, then oldest first |
+| GET | `/comments/:id/replies?cursor` | page of `Comment` (replies), oldest first |
+| POST / DELETE | `/comments/:id/like` | → `{ liked, likeCount }` (`comment_like` notification) |
+| POST | `/comments/:id/pin` | post author only, top-level comments only; replaces any previously pinned comment → `Comment` |
+| DELETE | `/comments/:id/pin` | post author only → `204` |
+
+`Post.commentCount` keeps counting every comment including replies. Deleting a top-level comment deletes its replies.
+
+### 4a. Polls & quizzes
+
+- Create with `POST /posts` (only `type=post`): field `poll` = JSON (in multipart, a JSON **string**):
+  `{ question?: string (≤ 200), options: string[] (2..4, each 1..100), correctOptionIndex?: number /* 0-based → makes it a quiz */ }`.
+- `POST /posts/:id/poll/vote` `{ optionId }` → `Poll` (with results). `409 CONFLICT` if already voted, `400` for an unknown option. Authors cannot vote on their own poll (`403`).
+
+### 4b. Series (courses / playlists)
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/series` | JSON or multipart `{ title (1..100), description? (≤ 1000), category, cover? (image file) }` → `201 Series` |
+| GET | `/series/:id` | `SeriesDetail` |
+| PATCH | `/series/:id` | owner only; same fields, all optional (multipart for a new `cover`) → `Series` |
+| DELETE | `/series/:id` | owner only → `204` (posts are kept) |
+| POST | `/series/:id/items` | owner only `{ postId, position? /* 1-based, default = append */ }`. Post must be the owner's own; a post belongs to at most one series (`409`) → `SeriesDetail` |
+| DELETE | `/series/:id/items/:postId` | owner only → `SeriesDetail` |
+| PUT | `/series/:id/items` | owner only, reorder: `{ postIds: string[] }` = exactly the current items in the new order → `SeriesDetail` |
+| POST / DELETE | `/series/:id/follow` | → `{ isFollowing, followerCount }` (cannot follow your own series: `400`) |
+| GET | `/users/:id/series?cursor` | page of `Series`, newest first |
+| GET | `/me/series/following?cursor` | page of `Series` I follow |
+
+### 5. Discovery & social
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/hashtags/:tag?sort=recent\|popular&cursor` | `{ tag, postCount, items: Post[], nextCursor }` (`tag` lowercase, without `#`; `postCount` = all visible posts) |
+| POST / DELETE | `/posts/:id/repost` | → `{ reposted, repostCount }`. Cannot repost your own post (`400`). `repost` notification. Reposts appear in followers' `tab=following` feed with `repostedBy` |
+| GET | `/users/:id/reposts?cursor` | page of `Post` reposted by that user (newest repost first) |
+| PATCH | `/posts/:id` | author only `{ text?, category? }` → `Post` with `editedAt` set; hashtags re-extracted |
+| POST / DELETE | `/posts/:id/pin` | pin on your own profile (author only, `ready` posts only, max 3 → `409`) → `{ isPinned, pinnedPostIds }` |
+| GET | `/users/:id/pinned` | `Post[]` in pin order (respects privacy/blocks) |
+| GET | `/me/history?cursor` | page of `{ viewedAt, post: Post }`, most recent first. Fed by `POST /posts/:id/view` (re-viewing moves the post to the top; the view count still counts once per user) |
+| DELETE | `/me/history` | clears the history → `204` (view counts unchanged) |
+| DELETE | `/me/history/:postId` | removes one entry → `204` |
+| POST | `/conversations/:id/messages` | new optional field `postId` (JSON or multipart): shares a post into the conversation (`text` may then be empty). The post must be visible to the sender. Increments the post's `shareCount` |
+| GET | `/users/mentions?q=&limit=` | mention autocomplete: `UserSummary[]` (default 8, max 20); prefix match on username/name; people you follow first. `q` may start with `@` |
+
+### 6. Personalisation & privacy
+
+| Method | Path | Notes |
+|---|---|---|
+| PUT | `/users/me/interests` | `{ categories: CategoryId[] (0..10) }` → `Me` |
+| GET | `/users/me/settings` | `Settings` |
+| PUT | `/users/me/settings` | partial `Settings` (deep-merged, e.g. `{ notifications: { likes: false } }`) → `Settings`. Switching `isPrivate` to `false` auto-accepts pending follow requests |
+| POST | `/users/:id/follow` | now → `{ isFollowing, followStatus, followerCount }`. Following a private account creates a request (`followStatus: 'requested'`, `follow_request` notification) |
+| DELETE | `/users/:id/follow` | unfollows **or cancels a pending request** → same shape |
+| GET | `/me/follow-requests?cursor` | page of `FollowRequest` (received), newest first |
+| GET | `/me/follow-requests/count` | `{ count }` |
+| POST | `/me/follow-requests/:userId/accept` | → `204` (`follow_accepted` notification to the requester) |
+| POST | `/me/follow-requests/:userId/decline` | → `204` |
+| DELETE | `/users/:id/follower` | remove someone who follows you → `204` |
+
+- For You ranking: engagement × time decay, boosted ×1.5 for creators you follow, ×1.4 for posts in your `interests` categories, ×1.2 for your university; videos you already watched are moved after all unwatched posts.
+- Private account: only the owner and approved followers see its posts (everywhere: feeds, profile, search, hashtags, series, pinned, shared PostSummary). Profile (`User`) stays visible; `followers`/`following`/`posts`/`reposts` lists return an empty page to non-followers.
+- DM policy is enforced on `POST /conversations` (DM and group members) and on sending in a DM: `403 FORBIDDEN` with message "This user does not accept messages from you". A DM where the recipient already sent a message stays open.
+
+### 7. Email verification
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/auth/verify-email` | auth required, `{ code /* 6 digits */ }` → `Me` (`emailVerified: true`). Wrong/expired code → `400` (max 5 attempts per code, code valid 24 h) |
+| POST | `/auth/resend-verification` | auth required → `204` (`409` if already verified) |
+
+A code is e-mailed at registration (logged to console without SMTP). Unverified accounts keep full access; the app should show a reminder.
+
+### 8. Creator analytics
+
+`GET /me/analytics?range=7d|28d|90d` (default `28d`) →
+
+```ts
+{
+  range: '7d' | '28d' | '90d', from: 'YYYY-MM-DD', to: 'YYYY-MM-DD',   // UTC days, inclusive, to = today
+  totals: { views, likes, comments, shares, newFollowers },           // within the range
+  daily: { date: 'YYYY-MM-DD', views, likes, comments, shares, newFollowers }[],  // one entry per day, zero-filled
+  topPosts: { post: Post, views, likes, comments, shares }[],         // max 5, by views in range then likes
+  followerCount, postCount                                            // current totals
+}
+```
+`views` = unique viewers per post per day (a user re-watching on another day counts again). Likes/comments/new followers exclude your own actions.
+
+### 9. Moderation & admin
+
+- `User.isAdmin` (separate from `role`). CLI: `npm run make-admin -- <email>` (`-- --revoke <email>` to remove).
+- `POST /me/verification-request` `{ message? (≤ 500) }` → `201 VerificationRequest` (`409` if already verified or a request is pending). `GET /me/verification-request` → `VerificationRequest | null` (latest).
+- Admin endpoints (all `403 FORBIDDEN` for non-admins):
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/admin/reports?status=open\|reviewed\|dismissed&cursor` | page of `Report` (default `open`, oldest first for `open`, newest first otherwise) |
+| POST | `/admin/reports/:id/resolve` | `{ action?: 'none' \| 'remove_content' \| 'suspend_user', note? }` → `Report` (`status: 'reviewed'`). `remove_content` deletes the target (post/comment/community/message); `suspend_user` suspends the target's author (or the user) |
+| POST | `/admin/reports/:id/dismiss` | `{ note? }` → `Report` (`status: 'dismissed'`) |
+| DELETE | `/admin/posts/:id`, `/admin/comments/:id`, `/admin/communities/:id` | → `204` |
+| POST | `/admin/users/:id/suspend` | `{ reason? }` → `204` (revokes refresh tokens, disconnects sockets). Admins cannot suspend themselves |
+| DELETE | `/admin/users/:id/suspend` | → `204` |
+| GET | `/admin/verification-requests?status=pending\|approved\|rejected&cursor` | page of `VerificationRequest` |
+| POST | `/admin/verification-requests/:id/approve` / `.../reject` | → `VerificationRequest`; approve sets `verified: true` and sends a `verification` notification |
+
+### 10. Community events
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/communities/:id/events` | members only `{ title (3..120), description? (≤ 2000), startsAt (ISO, future), endsAt? (> startsAt), location? (≤ 200), onlineUrl? (http/https URL) }` → `201 Event`. Notifies all other members (`event` notification + push, respecting `notifications.events`) |
+| GET | `/communities/:id/events?when=upcoming\|past&cursor` | page of `Event` (upcoming: soonest first, includes events in progress; past: most recent first) |
+| GET | `/events/:id` | `Event` |
+| PATCH | `/events/:id` | creator or community owner, same fields optional → `Event` |
+| DELETE | `/events/:id` | creator or community owner → `204` |
+| PUT | `/events/:id/rsvp` | `{ status: 'going' \| 'not_going' }` (members only) → `{ myRsvp, goingCount }` |
+| DELETE | `/events/:id/rsvp` | → `{ myRsvp: null, goingCount }` |
+| GET | `/me/events?rsvp=going&cursor` | upcoming events of my communities, soonest first; `rsvp=going` keeps only events I'm going to |
+
+### Realtime additions (Socket.IO)
+
+- `post:ready` `{ post: Post }` and `post:failed` `{ postId, reason }` (to the author).
+- `notification:new` is also emitted for the new notification types.
+- Suspended users are disconnected; reconnecting yields `connect_error` `ACCOUNT_SUSPENDED`.

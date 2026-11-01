@@ -1,75 +1,155 @@
-# StudyHub — réseau social étudiant (React Native)
+# StudyHub — application mobile (React Native, Android & iOS)
 
-Application mobile multiplateforme (Android & iOS) réalisée à partir de la maquette fournie :
-fil vidéo vertical, découverte de contenus, communautés universitaires, messagerie, recherche
-avancée avec filtres, publications, annuaire d'utilisateurs et profils.
+Réseau social éducatif façon TikTok pour étudiants : fil vidéo vertical, posts, communautés,
+messagerie temps réel, notifications, recherche avancée et profils. L'application est
+**entièrement branchée sur l'API réelle** (`../backend`, contrat dans [`../docs/API.md`](../docs/API.md)) :
+il n'y a plus aucune donnée fictive (seules les icônes de catégories restent embarquées comme
+repli hors-ligne, elles sont identiques à `GET /categories`).
 
 ## Compatibilité
 
 | Plateforme | Version minimale | Où c'est configuré |
 |------------|------------------|--------------------|
 | Android    | **7.0 (API 24)** | `android/build.gradle` → `minSdkVersion = 24` |
-| iOS        | **12.4**         | `ios/Podfile` (`min_ios_version_supported`) et projet Xcode (`IPHONEOS_DEPLOYMENT_TARGET = 12.4`) |
+| iOS        | **12.4**         | `ios/Podfile` (`min_ios_version_supported`) + projet Xcode (`IPHONEOS_DEPLOYMENT_TARGET = 12.4`) |
 
-- **React Native 0.72.17** est la dernière version de React Native qui supporte iOS 12 (à partir
-  de la 0.73, iOS 13.4 minimum). Toutes les dépendances sont **épinglées** sur des versions
-  compatibles iOS 12.4 / Android 7 : ne les mettez pas à jour sans vérifier leur version iOS minimale.
-- iOS 12.0 à 12.3 ne sont pas supportés par React Native lui-même (12.4 minimum). Tous les
-  appareils compatibles iOS 12 (iPhone 5s et plus récents) peuvent installer la 12.5.x.
-- Le moteur JavaScript **Hermes** est activé sur les deux plateformes : le JS ne dépend pas du
-  moteur JavaScriptCore du système, ce qui évite les problèmes de compatibilité avec les anciennes versions d'iOS.
+- **React Native 0.72.17** (dernière version supportant iOS 12), ancienne architecture, **Hermes** activé.
+- Toutes les dépendances sont **épinglées** (versions exactes). Ne les mettez pas à jour sans
+  vérifier leur version iOS / Android minimale (tableau ci-dessous).
+- Le `Podfile` aligne la cible de déploiement de tous les pods sur 12.4 (`post_install`) : certains pods
+  déclarent 8.0/9.0, ce que Xcode 14.3+ refuse (libarclite absente).
 
-## Fonctionnalités
-
-| Écran | Fonctionnalités |
-|-------|-----------------|
-| **Accueil** (fil vidéo) | Onglets *For You / Following*, défilement vertical page par page, like (bouton ou double tap avec animation), commentaires, favoris, partage natif, suivre l'auteur, hashtags, son, badge de notifications |
-| **Discover** | Barre de recherche, puces de catégories filtrantes, raccourcis Posts / Users / Communities, *Trending Topics*, *Popular Content* (durée, vues, favoris), bannière communauté |
-| **Communities** | Bannière, communautés populaires (cartes horizontales), *My Communities*, *Join / Joined*, page détail, **création de communauté** (formulaire validé) |
-| **Inbox** | Filtres *All / Messages / Notifications / Mentions*, badges non lus, utilisateurs en ligne, conversations en sourdine, accusés de lecture, recherche, **chat** (envoi de messages) |
-| **Recherche** | Résultats mixtes (contenus, utilisateurs, communautés), onglets par type, compteur de résultats, **panneau de filtres** (type de contenu, catégorie, université, tri) |
-| **Posts** | Onglets *For You / Following / Popular / Latest*, zone *Share something…*, posts avec image, hashtags, **note vocale** (forme d'onde), likes / commentaires / partages / favoris, *pull-to-refresh* |
-| **Users** | Onglets *All / Students / Professors / Top Creators*, abonnés et relations communes, Follow / Following, recherche |
-| **Profil** | Statistiques, *Edit Profile*, onglets Posts / Videos / Saved / Communities ; profils des autres utilisateurs avec Follow et **Message** |
-| **Création** (bouton +) | Rédaction d'un post avec hashtags, catégorie, photo, compteur de caractères |
-| **Notifications / Commentaires** | Liste des notifications (marquées lues automatiquement), fil de commentaires avec ajout |
-
-### Responsive / réactif
-
-- Les tailles de police s'adaptent à la taille de l'écran (`moderateScale`, `src/theme`).
-- `useWindowDimensions` (`src/utils/responsive.ts`) : la mise en page se recalcule à la rotation,
-  en mode multi-fenêtre Android 7+ et en Slide Over sur iPad.
-- Sur tablette / en paysage, le contenu est centré dans une colonne de 680 pt maximum et les grilles
-  passent de 4 à 5 puis 7 colonnes.
-- Encoches et barres système gérées avec `react-native-safe-area-context` ; clavier géré
-  (`KeyboardAvoidingView` sur iOS, `adjustResize` sur Android).
-
-## Structure
+## Architecture
 
 ```
 mobile/
-├── App.tsx                     # Providers + navigation
+├── App.tsx                       # QueryClient + SafeArea + Auth + ActionSheet + Navigation
+├── react-native.config.js        # autolinking : react-native-video → implémentation ExoPlayer
+├── patches/                      # patch-package (react-native-video, cf. plus bas)
 ├── src/
-│   ├── theme/                  # couleurs, espacements, typographie
-│   ├── data/                   # types + données de démonstration
-│   ├── context/AppContext.tsx  # état global (useReducer) : follow, like, favoris, messages…
-│   ├── navigation/             # onglets du bas + pile native
-│   ├── components/             # UI réutilisable (ui.tsx, items.tsx, ProfileView.tsx)
-│   ├── screens/                # un fichier par écran
-│   └── utils/                  # responsive, formats de dates/nombres
-├── android/  ios/              # projets natifs
-└── __tests__/                  # tests Jest (logique + navigation)
+│   ├── env.ts                    # ⚙️ URL de l'API (surcharge locale)
+│   ├── config.ts                 # résolution de l'URL (émulateur / simulateur / prod), mediaUrl()
+│   ├── api/
+│   │   ├── types.ts              # types = miroir de docs/API.md
+│   │   ├── client.ts             # fetch typé, Bearer, refresh single-flight, uploads XHR + progression
+│   │   ├── errors.ts             # ApiError normalisée (codes du contrat + NETWORK_ERROR/TIMEOUT…)
+│   │   ├── endpoints.ts          # une fonction par route du contrat
+│   │   └── tokenStorage.ts       # tokens dans le Keychain iOS / Keystore Android
+│   ├── auth/AuthContext.tsx      # session : restauration au démarrage, login/register/logout, Me
+│   ├── query/                    # React Query : clés, hooks, mises à jour optimistes, messagerie
+│   ├── realtime/SocketProvider.tsx  # Socket.IO (messages, lecture, saisie, notifications)
+│   ├── media/picker.ts           # caméra / galerie (react-native-image-picker) + permissions
+│   ├── components/               # kit UI (ui.tsx), éléments de liste, lecteur vidéo, feuille d'actions
+│   ├── screens/                  # un écran par fichier (+ screens/auth)
+│   ├── navigation/               # pile auth / pile connectée + onglets
+│   └── theme, utils, constants
+├── __tests__/                    # Jest (client API, cache, parcours auth, écrans)
+└── integration/                  # test live contre un backend lancé (hors `npm test`)
 ```
+
+**Couche API** (`src/api/client.ts`)
+- Ajoute `Authorization: Bearer <accessToken>` ; sur `401`, **un seul** `POST /auth/refresh`
+  est lancé même si plusieurs requêtes échouent en même temps (single-flight), puis les requêtes
+  sont rejouées avec le nouveau token. Le refresh token est **renouvelé à chaque rotation** et
+  re-sauvegardé dans le Keychain.
+- Refresh refusé par le serveur → session effacée et retour à l'écran d'accueil.
+  Échec réseau pendant le refresh → la session est conservée.
+- Erreurs normalisées en `ApiError {status, code, message, details}` ; `error.fields` donne les
+  erreurs par champ (`VALIDATION_ERROR` → `[{path, message}]`, `CONFLICT` → `{field}`), affichées
+  directement sous les champs des formulaires.
+- Uploads multipart via `XMLHttpRequest` pour la **barre de progression** (vidéos ≤ 100 Mo).
+
+**Données serveur** : tout passe par React Query (v4) — listes infinies à curseur
+(`{items, nextCursor}`), pull-to-refresh, états chargement / vide / erreur + « Réessayer » partout.
+Les actions like, favori, suivre, rejoindre sont **optimistes** : l'entité est patchée dans
+*tous* les caches (fils, détail, recherche, profils…) puis restaurée en cas d'erreur.
+
+**Temps réel** : Socket.IO connecté tant que l'utilisateur est connecté (`auth` lu à chaque
+connexion → toujours le dernier access token ; `connect_error: UNAUTHORIZED` → refresh puis
+reconnexion). Événements : `message:new` (chat + liste + badges), `typing`, `conversation:read`
+(« Vu »), `notification:new` (badge cloche + onglet Inbox). Déconnexion en arrière-plan,
+resynchronisation au retour.
+
+## Écrans
+
+| Domaine | Fonctionnalités |
+|---------|-----------------|
+| Auth | Accueil, connexion (email ou nom d'utilisateur), inscription (université avec suggestions `/universities`, rôle), mot de passe oublié → code à 6 chiffres. Validation côté client avec erreurs en ligne. |
+| Accueil | Fil vidéo plein écran *For You / Following* : lecture auto de la vidéo visible, pause des autres / écran quitté / app en arrière-plan, tap = pause, double tap = like + cœur animé, boucle, miniature pendant le chargement, indicateur de buffering, son on/off, rail (profil + suivre, like, commentaires, favori, partage natif, options), légende, hashtags, catégorie, vue comptée, défilement infini. |
+| Discover | Recherche, catégories, *Trending Topics*, contenus populaires, suggestions de comptes, accès Posts / Users / Communities. |
+| Recherche | Onglets All / Posts / Users / Communities, filtres (type, catégorie, université, tri), requêtes « debounced », hashtags tendance. |
+| Posts | *For You / Following / Popular / Latest*, posts texte / image / audio (lecture des notes vocales). |
+| Users | All / Students / Professors / Top Creators, recherche, suivre. |
+| Communautés | Populaires, les miennes, toutes (par type), détail (posts + membres), rejoindre / quitter, créer, modifier et supprimer (propriétaire). |
+| Création (+) | **Vidéo** (caméra ou galerie, aperçu lu, légende, catégorie, communauté) ou **Post** (texte + photo) avec barre de progression, puis ouverture du contenu publié. |
+| Détail / commentaires | Lecture vidéo ou post, actions, auteur, aperçu des commentaires ; écran commentaires (ajout, suppression des siens, signalement). |
+| Inbox | Conversations avec badges non lus, filtres All / Messages / Notifications / Mentions, nouveau message (recherche d'utilisateurs), groupes, mise en sourdine. Chat temps réel (liste inversée paginée, texte + photo, « en train d'écrire », « Vu »). |
+| Notifications | Liste paginée, tout marquer lu à l'ouverture. |
+| Profil | Statistiques, onglets Vidéos (grille 3 colonnes) / Posts / Favoris / Communautés, édition (nom, pseudo, bio, université, rôle, avatar), abonnés / abonnements, réglages : mot de passe, comptes bloqués, déconnexion, suppression du compte. |
+| Autre profil | Suivre, Message (DM créé ou retrouvé), bloquer / débloquer, signaler. Signalement aussi sur posts, commentaires, communautés. |
+
+Responsive (colonne max 680 pt sur tablette), safe areas, clavier, libellés d'accessibilité.
+
+## Configurer l'URL de l'API
+
+Éditez **`src/env.ts`** :
+
+```ts
+export const API_URL: string | null = null;            // null = valeur de dev automatique
+export const PRODUCTION_API_URL: string | null = null; // utilisée en build release si API_URL est null
+```
+
+| Cas | Valeur |
+|-----|--------|
+| Émulateur Android | `null` → `http://10.0.2.2:4000` |
+| Simulateur iOS | `null` → `http://localhost:4000` |
+| Téléphone réel (même Wi-Fi) | `'http://192.168.x.y:4000'` (IP LAN de votre machine) |
+| Production | `'https://api.votre-domaine.com'` (**HTTPS obligatoire**) |
+
+En dev, les URLs médias renvoyées en `http://localhost:4000/uploads/…` sont réécrites vers l'URL
+configurée (`mediaUrl()` dans `src/config.ts`) pour qu'elles soient joignables depuis l'émulateur.
+Le mieux reste de régler `PUBLIC_URL` du backend sur l'adresse réellement joignable.
+
+**HTTP en clair** : autorisé uniquement en **debug** (Android : `src/debug/res/xml/network_security_config.xml` ;
+le build release utilise `src/main/res/xml/network_security_config.xml` = HTTPS seulement).
+iOS : `NSAllowsLocalNetworking` (localhost / réseau local) dans `Info.plist`.
+
+## Dépendances natives et compatibilité
+
+Vérifié dans les podspecs et `android/build.gradle` des paquets installés :
+
+| Paquet | Version | iOS min (podspec) | Android | Pourquoi compatible |
+|--------|---------|-------------------|---------|---------------------|
+| `react-native-keychain` | 8.2.0 | 9.0 | minSdk 21, compile/target = valeurs du projet (33) | Ancienne archi, Java ; dépendances AndroidX + `com.facebook.conceal:conceal:1.1.3` (Maven Central). |
+| `@react-native-async-storage/async-storage` | 1.23.1 | 9.0 (ancienne archi ; 13.4 seulement si nouvelle archi) | minSdk/compileSdk du projet, `namespace` posé pour AGP ≥ 7 | Stockage local non sensible (cache du profil `Me`). Room/KSP non activés par défaut. |
+| `react-native-image-picker` | 7.1.2 | 9.0 (PHPicker protégé par `@available(iOS 14)`, sinon UIImagePickerController) | compileSdk 33, minSdk 21 | Fournit son propre `FileProvider` (`${applicationId}.imagepickerprovider`). La 7.2.x impose compileSdk 35 → écartée. |
+| `react-native-video` | 5.2.1 | 8.0 | **implémentation ExoPlayer** (`android-exoplayer`) : ExoPlayer 2.13.3 + AndroidX + OkHttp | La 6.x exige iOS 13. L'implémentation Android par défaut de la 5.x dépend d'un artefact JitPack et force des `abiFilters` : on lie `android-exoplayer` via `react-native.config.js`. ExoPlayer ≥ 2.13 est publié sur le dépôt Maven de Google (`google()`). |
+| `react-native-vector-icons`, `linear-gradient`, `safe-area-context`, `screens` | inchangées | ≤ 12.4 | — | déjà présentes. |
+
+Dépendances JS pures : `@tanstack/react-query@4.36.1`, `socket.io-client@4.7.5`.
+Dev : `patch-package@8.0.0`, `@testing-library/react-native@12.4.3`, `@types/react-native-video@5.0.20`.
+
+**Patch** `patches/react-native-video+5.2.1.patch` (appliqué par `postinstall`) : dans
+`android-exoplayer/build.gradle`, la dépendance `'com.squareup.okhttp3:okhttp:${OKHTTP_VERSION}'`
+est entre guillemets simples (jamais interpolée par Groovy → résolution impossible) ; elle est
+remplacée par OkHttp 4.9.2 (version de RN 0.72, surchargeable via `ext.okhttpVersion`), et les
+valeurs par défaut compileSdk/buildTools passent à 33.
+
+Permissions : iOS `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`,
+`NSPhotoLibraryUsageDescription`, `NSPhotoLibraryAddUsageDescription` ; Android `INTERNET`,
+`CAMERA` (demandée à l'exécution avant la caméra), `RECORD_AUDIO`, `READ_MEDIA_IMAGES`,
+`READ_MEDIA_VIDEO`, `READ_EXTERNAL_STORAGE` (maxSdk 32).
 
 ## Démarrage
 
 Pré-requis : Node ≥ 18, JDK 17, Android Studio (SDK 33), et pour iOS : macOS + Xcode + CocoaPods.
+Lancez d'abord le backend (`../backend/README.md`).
 
 ```bash
 cd mobile
-npm install
+npm install                 # applique aussi les patches (postinstall)
 
-# Android (émulateur ou appareil connecté)
+# Android (émulateur ou appareil)
 npm run android
 
 # iOS
@@ -82,28 +162,29 @@ Vérifications :
 ```bash
 npm run typecheck   # TypeScript
 npm run lint        # ESLint + Prettier
-npm test            # Jest
+npm test            # Jest (mocks : keychain, vidéo, image-picker, socket.io-client, AsyncStorage)
+
+# Test d'intégration live (backend lancé sur :4000)
+API_URL=http://localhost:4000 npx jest -c jest.integration.config.js
 ```
 
-## Brancher un vrai backend
+## Build de production
 
-Les données sont pour l'instant fictives (`src/data/mock.ts`) et l'état vit en mémoire
-(`src/context/AppContext.tsx`). Pour passer en production :
+1. Renseignez `PRODUCTION_API_URL` (ou `API_URL`) dans `src/env.ts` avec une URL **HTTPS**, et
+   `PUBLIC_URL` du backend en HTTPS (les médias doivent aussi être servis en HTTPS).
+2. **Android** : créez une clé (`keytool -genkeypair -v -keystore release.keystore -alias studyhub -keyalg RSA -keysize 2048 -validity 10000`),
+   déclarez-la dans `android/app/build.gradle` (`signingConfigs.release`, mots de passe via
+   `~/.gradle/gradle.properties`, jamais commités) puis `cd android && ./gradlew bundleRelease` (AAB pour le Play Store).
+3. **iOS** : dans Xcode, choisissez votre équipe et le profil de distribution, schéma *Release*,
+   `Product → Archive`. Retirez `NSExceptionDomains/localhost` de l'`Info.plist` si vous le souhaitez
+   (`NSAllowsLocalNetworking` n'affecte pas les domaines publics).
+4. La suppression de compte (exigence App Store) est disponible dans *Réglages*.
 
-1. Remplacer les imports de `mock.ts` par des appels API (REST/GraphQL) et charger l'état initial au démarrage.
-2. Faire persister les actions du reducer (`toggleFollow`, `sendMessage`, `addPost`…) côté serveur.
-3. Ajouter l'authentification et les notifications push (FCM / APNs).
+## Limites connues / à tester sur appareil
 
-### Vidéo
-
-Le fil d'accueil affiche une image plein écran par publication (`VideoCard` dans
-`src/screens/HomeScreen.tsx`). Aucune bibliothèque vidéo récente ne supporte encore iOS 12 :
-`react-native-video` 6.x exige iOS 13, et la 5.x dépend d'un build Android abandonné. Pour lire de
-vraies vidéos, remplacez l'`ImageBackground` de `VideoCard` par un lecteur, et utilisez la prop
-`active` (déjà calculée) pour mettre en pause les vidéos qui ne sont pas à l'écran.
-
-### Photos
-
-Le bouton *Photo* de la création de post ajoute une image de démonstration. Pour choisir une vraie photo,
-ajoutez une bibliothèque comme `react-native-image-picker`, en choisissant une version qui supporte encore iOS 12.4 ; la permission
-`NSPhotoLibraryUsageDescription` est déjà déclarée dans `Info.plist`.
+- Pas de SDK Android ni de Xcode sur la machine de développement : la compilation native
+  (Gradle/CocoaPods) et la lecture vidéo réelle doivent être validées sur appareil/émulateur.
+- Les accusés de lecture (« Vu ») ne sont affichés que pour les lectures survenues pendant que
+  l'app est ouverte (le contrat REST n'expose pas l'état de lecture par participant).
+- Notifications push (FCM/APNs) non implémentées (l'endpoint `/users/me/push-token` existe côté API).
+- Création de communauté sans avatar (icône + couleur uniquement).

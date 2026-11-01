@@ -29,7 +29,9 @@ jest.mock('react-native-keychain', () => {
       store.set(opts.service ?? 'default', {username, password});
       return true;
     }),
-    getGenericPassword: jest.fn(async (opts = {}) => store.get(opts.service ?? 'default') ?? false),
+    getGenericPassword: jest.fn(
+      async (opts = {}) => store.get(opts.service ?? 'default') ?? false,
+    ),
     resetGenericPassword: jest.fn(async (opts = {}) => {
       store.delete(opts.service ?? 'default');
       return true;
@@ -69,7 +71,8 @@ jest.mock('socket.io-client', () => {
       disconnect: jest.fn(() => socket),
       removeAllListeners: jest.fn(),
       /** test helper: simulate a server event */
-      __receive: (ev, payload) => (handlers[ev] || []).forEach(fn => fn(payload)),
+      __receive: (ev, payload) =>
+        (handlers[ev] || []).forEach(fn => fn(payload)),
     };
     sockets.push(socket);
     return socket;

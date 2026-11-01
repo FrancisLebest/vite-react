@@ -1,5 +1,10 @@
 import {ApiClient, buildQuery, TokenStorage} from '../src/api/client';
-import {ApiError, errorFromResponse, fieldErrors, normalizeError} from '../src/api/errors';
+import {
+  ApiError,
+  errorFromResponse,
+  fieldErrors,
+  normalizeError,
+} from '../src/api/errors';
 import {createEndpoints} from '../src/api/endpoints';
 import type {TokenPair} from '../src/api/types';
 import {createFetchMock, page} from './helpers/fetchMock';
@@ -23,9 +28,9 @@ const BASE = 'http://api.test';
 
 describe('buildQuery', () => {
   it('skips empty values and encodes', () => {
-    expect(buildQuery({q: 'a b', cursor: undefined, mine: true, x: '', n: 0})).toBe(
-      '?q=a%20b&mine=true&n=0',
-    );
+    expect(
+      buildQuery({q: 'a b', cursor: undefined, mine: true, x: '', n: 0}),
+    ).toBe('?q=a%20b&mine=true&n=0');
     expect(buildQuery({})).toBe('');
   });
 });
@@ -53,17 +58,23 @@ describe('ApiClient', () => {
       'POST /auth/refresh': async req => {
         refreshCount++;
         expect(req.body).toEqual({refreshToken: 'R1'});
-        await new Promise(r => setTimeout(r, 10));
+        await new Promise<void>(r => setTimeout(() => r(), 10));
         return {body: {accessToken: 'A2', refreshToken: 'R2'}};
       },
       'GET /auth/me': req =>
         req.headers.Authorization === 'Bearer A2'
           ? {body: {id: 'me'}}
-          : {status: 401, body: {error: {code: 'UNAUTHORIZED', message: 'jwt expired'}}},
+          : {
+              status: 401,
+              body: {error: {code: 'UNAUTHORIZED', message: 'jwt expired'}},
+            },
       'GET /notifications/unread-count': req =>
         req.headers.Authorization === 'Bearer A2'
           ? {body: {count: 3}}
-          : {status: 401, body: {error: {code: 'UNAUTHORIZED', message: 'jwt expired'}}},
+          : {
+              status: 401,
+              body: {error: {code: 'UNAUTHORIZED', message: 'jwt expired'}},
+            },
     });
     const storage = memoryStorage({accessToken: 'A1', refreshToken: 'R1'});
     const client = new ApiClient({baseUrl: BASE, storage, fetch});
@@ -81,13 +92,19 @@ describe('ApiClient', () => {
     expect(c).toEqual({id: 'me'});
     expect(refreshCount).toBe(1);
     expect(storage.value()).toEqual({accessToken: 'A2', refreshToken: 'R2'});
-    expect(onTokens).toHaveBeenCalledWith({accessToken: 'A2', refreshToken: 'R2'});
+    expect(onTokens).toHaveBeenCalledWith({
+      accessToken: 'A2',
+      refreshToken: 'R2',
+    });
     expect(calls.filter(r => r.path === '/auth/refresh')).toHaveLength(1);
   });
 
   it('clears the session and notifies when the refresh token is rejected', async () => {
     const {fetch} = createFetchMock({
-      'GET /auth/me': () => ({status: 401, body: {error: {code: 'UNAUTHORIZED', message: 'expired'}}}),
+      'GET /auth/me': () => ({
+        status: 401,
+        body: {error: {code: 'UNAUTHORIZED', message: 'expired'}},
+      }),
       'POST /auth/refresh': () => ({
         status: 401,
         body: {error: {code: 'UNAUTHORIZED', message: 'Invalid refresh token'}},
@@ -98,7 +115,10 @@ describe('ApiClient', () => {
     await client.restore();
     const expired = jest.fn();
     client.onSessionExpired(expired);
-    await expect(client.get('/auth/me')).rejects.toMatchObject({code: 'UNAUTHORIZED', status: 401});
+    await expect(client.get('/auth/me')).rejects.toMatchObject({
+      code: 'UNAUTHORIZED',
+      status: 401,
+    });
     expect(expired).toHaveBeenCalledTimes(1);
     expect(storage.value()).toBeNull();
     expect(client.accessToken).toBeNull();
@@ -109,14 +129,20 @@ describe('ApiClient', () => {
       if (url.endsWith('/auth/refresh')) {
         throw new TypeError('Network request failed');
       }
-      return {ok: false, status: 401, text: async () => ''} as unknown as Response;
+      return {
+        ok: false,
+        status: 401,
+        text: async () => '',
+      } as unknown as Response;
     }) as unknown as typeof globalThis.fetch;
     const storage = memoryStorage({accessToken: 'A1', refreshToken: 'R1'});
     const client = new ApiClient({baseUrl: BASE, storage, fetch});
     await client.restore();
     const expired = jest.fn();
     client.onSessionExpired(expired);
-    await expect(client.get('/auth/me')).rejects.toMatchObject({code: 'NETWORK_ERROR'});
+    await expect(client.get('/auth/me')).rejects.toMatchObject({
+      code: 'NETWORK_ERROR',
+    });
     expect(expired).not.toHaveBeenCalled();
     expect(storage.value()).toEqual({accessToken: 'A1', refreshToken: 'R1'});
   });
@@ -128,7 +154,11 @@ describe('ApiClient', () => {
         body: {error: {code: 'UNAUTHORIZED', message: 'Invalid credentials'}},
       }),
     });
-    const client = new ApiClient({baseUrl: BASE, storage: memoryStorage(), fetch});
+    const client = new ApiClient({
+      baseUrl: BASE,
+      storage: memoryStorage(),
+      fetch,
+    });
     const api = createEndpoints(client);
     await expect(api.auth.login('x', 'y')).rejects.toMatchObject({
       code: 'UNAUTHORIZED',
@@ -146,13 +176,19 @@ describe('ApiClient', () => {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid body',
-            details: [{path: 'email', message: 'Invalid email', code: 'invalid_string'}],
+            details: [
+              {path: 'email', message: 'Invalid email', code: 'invalid_string'},
+            ],
           },
         },
       }),
       'GET /categories': () => ({status: 502, raw: '<html>Bad gateway</html>'}),
     });
-    const client = new ApiClient({baseUrl: BASE, storage: memoryStorage(), fetch});
+    const client = new ApiClient({
+      baseUrl: BASE,
+      storage: memoryStorage(),
+      fetch,
+    });
     const api = createEndpoints(client);
 
     const e1 = await api.auth
@@ -172,7 +208,10 @@ describe('ApiClient', () => {
         throw new TypeError('Network request failed');
       }) as unknown as typeof fetch,
     });
-    await expect(offline.get('/categories')).rejects.toMatchObject({code: 'NETWORK_ERROR', status: 0});
+    await expect(offline.get('/categories')).rejects.toMatchObject({
+      code: 'NETWORK_ERROR',
+      status: 0,
+    });
   });
 });
 
@@ -186,14 +225,24 @@ describe('error helpers', () => {
   it('reads CONFLICT {field} details as a field error', () => {
     const e = errorFromResponse(
       409,
-      JSON.stringify({error: {code: 'CONFLICT', message: 'Taken', details: {field: 'username'}}}),
+      JSON.stringify({
+        error: {
+          code: 'CONFLICT',
+          message: 'Taken',
+          details: {field: 'username'},
+        },
+      }),
     );
     expect(e.fields).toEqual({username: 'This username is already taken.'});
   });
 
   it('extracts field errors from several shapes', () => {
-    expect(fieldErrors({fieldErrors: {name: ['Too short']}})).toEqual({name: 'Too short'});
-    expect(fieldErrors([{path: ['user', 'email'], message: 'Bad'}])).toEqual({'user.email': 'Bad'});
+    expect(fieldErrors({fieldErrors: {name: ['Too short']}})).toEqual({
+      name: 'Too short',
+    });
+    expect(fieldErrors([{path: ['user', 'email'], message: 'Bad'}])).toEqual({
+      'user.email': 'Bad',
+    });
     expect(fieldErrors(null)).toEqual({});
   });
 
@@ -218,7 +267,11 @@ describe('upload', () => {
       },
       send: (body: unknown) => {
         sent = body;
-        (xhr.upload.onprogress as (e: unknown) => void)({lengthComputable: true, loaded: 50, total: 100});
+        (xhr.upload.onprogress as (e: unknown) => void)({
+          lengthComputable: true,
+          loaded: 50,
+          total: 100,
+        });
         (xhr.onload as () => void)();
       },
     };
@@ -231,7 +284,12 @@ describe('upload', () => {
     const progress: number[] = [];
     const api = createEndpoints(client);
     const post = await api.posts.create(
-      {type: 'video', text: 'hi', category: 'math', media: {uri: 'file:///v.mp4', name: 'v.mp4', type: 'video/mp4'}},
+      {
+        type: 'video',
+        text: 'hi',
+        category: 'math',
+        media: {uri: 'file:///v.mp4', name: 'v.mp4', type: 'video/mp4'},
+      },
       {onProgress: p => progress.push(p)},
     );
     expect(post).toEqual({id: 'p9'});

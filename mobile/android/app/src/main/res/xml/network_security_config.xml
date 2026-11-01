@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RELEASE builds: HTTPS only. The debug variant overrides this file
+     (src/debug/res/xml/network_security_config.xml) to allow the local HTTP API. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
