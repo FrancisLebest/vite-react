@@ -29,7 +29,7 @@ import {PickedMedia, pickImage, takePhoto} from '../media/picker';
 import {useCreatePost} from '../query/createPost';
 import {useCategories} from '../query/hooks';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 
 const MAX = 2000;
 
@@ -37,6 +37,8 @@ export default function CreatePostScreen({
   navigation,
   route,
 }: RootScreenProps<'CreatePost'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {me} = useAuth();
   const {categories} = useCategories();
   const openSheet = useSheet();
@@ -219,7 +221,7 @@ export default function CreatePostScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   flex: {flex: 1},
   header: {
     flexDirection: 'row',
@@ -228,19 +230,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: c.border,
   },
-  title: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
+  title: {fontSize: font.lg, fontWeight: weight.bold, color: c.text},
   progress: {paddingHorizontal: spacing.lg, paddingTop: spacing.md},
   scroll: {padding: spacing.lg},
   author: {flexDirection: 'row', alignItems: 'center'},
   authorBody: {marginLeft: spacing.md},
-  name: {fontSize: font.md, fontWeight: weight.bold, color: colors.text},
-  sub: {fontSize: font.sm, color: colors.textSecondary},
+  name: {fontSize: font.md, fontWeight: weight.bold, color: c.text},
+  sub: {fontSize: font.sm, color: c.textSecondary},
   label: {
     fontSize: font.sm,
     fontWeight: weight.semibold,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
@@ -248,24 +250,24 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 140,
     fontSize: font.lg,
-    color: colors.text,
+    color: c.text,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radius.md,
     padding: spacing.md,
   },
   counter: {
     alignSelf: 'flex-end',
     fontSize: font.xs,
-    color: colors.textMuted,
+    color: c.textMuted,
     marginTop: 4,
   },
-  counterError: {color: colors.danger},
+  counterError: {color: c.danger},
   image: {
     marginTop: spacing.md,
     aspectRatio: 16 / 9,
     borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: c.primarySoft,
   },
   removeImage: {position: 'absolute', top: spacing.md + 4, right: 4},
   toolbar: {
@@ -274,13 +276,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: c.border,
   },
   tool: {flexDirection: 'row', alignItems: 'center', marginRight: spacing.xl},
   toolText: {
     marginLeft: 6,
-    color: colors.primary,
+    color: c.primary,
     fontWeight: weight.semibold,
     fontSize: font.md,
   },
-});
+}));

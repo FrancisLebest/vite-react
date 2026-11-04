@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Video from 'react-native-video';
 import {mediaUrl} from '../config';
-import {colors, font, spacing, weight} from '../theme';
+import {font, makeStyles, spacing, useTheme, weight} from '../theme';
 import {Icon} from './ui';
 
 export interface VideoPlayerProps {
@@ -45,6 +45,8 @@ export function VideoPlayer({
   style,
   onLoad,
 }: VideoPlayerProps) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const [ready, setReady] = useState(false);
   const [buffering, setBuffering] = useState(true);
   const [error, setError] = useState(false);
@@ -135,7 +137,7 @@ export function VideoPlayer({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   container: {backgroundColor: '#100C28', overflow: 'hidden'},
   center: {
     ...StyleSheet.absoluteFillObject,
@@ -152,7 +154,7 @@ const styles = StyleSheet.create({
     paddingLeft: 5,
   },
   errorText: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.md,
     marginTop: spacing.sm,
     textAlign: 'center',
@@ -164,7 +166,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: colors.white,
+    borderColor: c.white,
   },
-  retryText: {color: colors.white, fontWeight: weight.semibold},
-});
+  retryText: {color: c.white, fontWeight: weight.semibold},
+}));

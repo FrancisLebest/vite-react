@@ -28,12 +28,14 @@ import {VideoFeedItem} from '../components/VideoFeedItem';
 import {useFeed} from '../query/hooks';
 import {useUnreadCounts} from '../query/messaging';
 import type {TabScreenProps} from '../navigation/types';
-import {colors, font, spacing, weight} from '../theme';
+import {font, makeStyles, spacing, useTheme, weight} from '../theme';
 import {useAppActive} from '../utils/hooks';
 
 const HEADER_HEIGHT = 56;
 
 export default function HomeScreen({navigation}: TabScreenProps<'Home'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
   const appActive = useAppActive();
@@ -228,6 +230,7 @@ function FeedTabButton({
   active: boolean;
   onPress: () => void;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -250,8 +253,8 @@ const textShadow = {
   textShadowRadius: 3,
 };
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: colors.black},
+const useStyles = makeStyles(c => ({
+  container: {flex: 1, backgroundColor: c.black},
   header: {
     position: 'absolute',
     top: 0,
@@ -271,7 +274,7 @@ const styles = StyleSheet.create({
     fontWeight: weight.semibold,
     ...textShadow,
   },
-  tabTextActive: {color: colors.white, fontWeight: weight.bold},
+  tabTextActive: {color: c.white, fontWeight: weight.bold},
   tabIndicator: {
     height: 3,
     width: 26,
@@ -279,7 +282,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     backgroundColor: 'transparent',
   },
-  tabIndicatorActive: {backgroundColor: colors.white},
+  tabIndicatorActive: {backgroundColor: c.white},
   headerRight: {flexDirection: 'row', alignItems: 'center'},
   bell: {marginLeft: spacing.sm},
   emptyFeed: {
@@ -288,10 +291,10 @@ const styles = StyleSheet.create({
     padding: spacing.xxxl,
   },
   emptyText: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.lg,
     textAlign: 'center',
     marginTop: spacing.lg,
   },
-  emptyBtn: {marginTop: spacing.lg, borderColor: colors.white},
-});
+  emptyBtn: {marginTop: spacing.lg, borderColor: c.white},
+}));

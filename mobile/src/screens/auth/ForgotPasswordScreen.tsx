@@ -4,12 +4,13 @@ import {api} from '../../api';
 import {PillButton, TextField} from '../../components/ui';
 import type {RootScreenProps} from '../../navigation/types';
 import {validators} from '../../utils/validation';
-import {AuthLayout, FormError, authStyles} from './AuthLayout';
+import {AuthLayout, FormError, useAuthStyles} from './AuthLayout';
 
 export default function ForgotPasswordScreen({
   navigation,
   route,
 }: RootScreenProps<'ForgotPassword'>) {
+  const authStyles = useAuthStyles();
   const [email, setEmail] = useState(route.params?.email ?? '');
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);

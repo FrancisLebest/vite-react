@@ -6,7 +6,7 @@ import { decodeOffsetCursor, limitSchema, offsetPage } from '../lib/pagination.j
 import { likeEscape } from '../lib/text.js';
 import { emptyToUndef, parse } from '../lib/validate.js';
 import { h, me } from '../middleware/auth.js';
-import { loadCommunities, loadPosts, loadUserSummaries, notBlockedSql } from '../services/hydrate.js';
+import { loadCommunities, loadPosts, loadUserSummaries, notBlockedSql, postVisibleSql } from '../services/hydrate.js';
 
 export const searchRouter = Router();
 
@@ -26,7 +26,7 @@ type Built = { where: string; order: string; params: unknown[]; whereParams: num
 function buildPosts(s: SearchQuery, viewer: string): Built {
   const q = new Q();
   const v = q.p(viewer);
-  q.and(notBlockedSql('p.author_id', v));
+  q.and(`p.status = 'ready'`).and(postVisibleSql('p', v));
   let relevance = '0::float';
   if (s.q) {
     const term = s.q.replace(/^#/, '');
@@ -55,7 +55,7 @@ function buildPosts(s: SearchQuery, viewer: string): Built {
 function buildUsers(s: SearchQuery, viewer: string): Built {
   const q = new Q();
   const v = q.p(viewer);
-  q.and(notBlockedSql('u.id', v));
+  q.and(notBlockedSql('u.id', v)).and('u.suspended_at IS NULL');
   let relevance = '0::float';
   if (s.q) {
     const like = q.p(`%${likeEscape(s.q.replace(/^@/, ''))}%`);

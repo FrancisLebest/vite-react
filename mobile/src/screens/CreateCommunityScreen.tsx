@@ -25,7 +25,7 @@ import {COMMUNITY_COLORS, COMMUNITY_ICONS} from '../constants/categories';
 import {useCommunity} from '../query/hooks';
 import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 
 const KINDS: {key: CommunityKind; label: string}[] = [
   {key: 'university', label: 'University'},
@@ -37,6 +37,8 @@ export default function CreateCommunityScreen({
   navigation,
   route,
 }: RootScreenProps<'CreateCommunity'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const editId = route.params?.communityId;
   const qc = useQueryClient();
   const existing = useCommunity(editId ?? '', !!editId);
@@ -222,7 +224,7 @@ export default function CreateCommunityScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   flex: {flex: 1},
   header: {
     flexDirection: 'row',
@@ -231,15 +233,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: c.border,
   },
   spacer: {width: 32},
-  title: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
+  title: {fontSize: font.lg, fontWeight: weight.bold, color: c.text},
   scroll: {padding: spacing.lg},
   label: {
     fontSize: font.sm,
     fontWeight: weight.semibold,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
@@ -248,9 +250,9 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
@@ -265,6 +267,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  swatchActive: {borderWidth: 3, borderColor: colors.primarySoft},
+  swatchActive: {borderWidth: 3, borderColor: c.primarySoft},
   footer: {padding: spacing.lg},
-});
+}));

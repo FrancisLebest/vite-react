@@ -64,3 +64,8 @@ yarn-error.log
 
 # testing
 /coverage
+
+# Firebase config (per-environment, see README)
+android/app/google-services.json
+ios/GoogleService-Info.plist
+ios/StudyHub/GoogleService-Info.plist

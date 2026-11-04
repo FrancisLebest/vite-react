@@ -36,7 +36,7 @@ import {
   useToggleLike,
 } from '../query/hooks';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {useAppActive} from '../utils/hooks';
 import {formatCount, useResponsive} from '../utils/responsive';
 import {timeAgo} from '../utils/time';
@@ -45,6 +45,8 @@ export default function ContentDetailScreen({
   route,
   navigation,
 }: RootScreenProps<'ContentDetail'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {postId} = route.params;
   const q = usePost(postId);
   const options = usePostOptions();
@@ -101,6 +103,7 @@ export default function ContentDetailScreen({
 }
 
 function VideoDetail({post}: {post: Post}) {
+  const styles = useStyles();
   const navigation = useNavigation();
   const {me} = useAuth();
   const focused = useIsFocused();
@@ -198,6 +201,7 @@ function VideoDetail({post}: {post: Post}) {
 }
 
 function CommentsPreview({post}: {post: Post}) {
+  const styles = useStyles();
   const navigation = useNavigation();
   const comments = useComments(post.id);
   const first = comments.items.slice(0, 3);
@@ -231,28 +235,28 @@ function CommentsPreview({post}: {post: Post}) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   scroll: {paddingBottom: spacing.xxxl},
   playerWrap: {marginHorizontal: spacing.lg},
   player: {borderRadius: radius.lg},
   title: {
     fontSize: font.lg,
     fontWeight: weight.semibold,
-    color: colors.text,
+    color: c.text,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
   tags: {
     fontSize: font.md,
-    color: colors.primaryLight,
+    color: c.primaryLight,
     fontWeight: weight.semibold,
     paddingHorizontal: spacing.lg,
     marginTop: 2,
   },
-  meta: {fontSize: font.sm, color: colors.textSecondary, marginTop: 2},
+  meta: {fontSize: font.sm, color: c.textSecondary, marginTop: 2},
   views: {
     fontSize: font.sm,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: spacing.xs,
     paddingHorizontal: spacing.lg,
   },
@@ -269,14 +273,14 @@ const styles = StyleSheet.create({
     margin: spacing.lg,
     padding: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
   },
   authorBody: {flex: 1, marginHorizontal: spacing.md},
   row: {flexDirection: 'row', alignItems: 'center'},
   authorName: {
     fontSize: font.md,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginRight: 4,
   },
   comment: {
@@ -285,8 +289,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   commentBody: {flex: 1, marginLeft: spacing.md},
-  commentName: {fontSize: font.sm, fontWeight: weight.bold, color: colors.text},
-  commentTime: {fontWeight: weight.regular, color: colors.textMuted},
-  commentText: {fontSize: font.md, color: colors.text, marginTop: 2},
+  commentName: {fontSize: font.sm, fontWeight: weight.bold, color: c.text},
+  commentTime: {fontWeight: weight.regular, color: c.textMuted},
+  commentText: {fontSize: font.md, color: c.text, marginTop: 2},
   commentBtn: {alignSelf: 'center', marginTop: spacing.sm},
-});
+}));

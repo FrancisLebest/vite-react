@@ -12,11 +12,12 @@ import {useQueryClient} from '@tanstack/react-query';
 import {api, client, isApiError} from '../api';
 import type {RegisterInput} from '../api/endpoints';
 import type {AuthResponse, Me} from '../api/types';
+import {unregisterPushToken} from '../push/PushProvider';
 import {qk} from '../query/keys';
 
 const ME_CACHE_KEY = 'studyhub.me.v1';
 
-export type AuthStatus = 'booting' | 'signedOut' | 'signedIn';
+export type AuthStatus = 'booting' | 'signedOut' | 'signedIn' | 'suspended';
 
 interface AuthCtx {
   status: AuthStatus;
@@ -31,6 +32,11 @@ interface AuthCtx {
   /** Replace the cached profile (after edit / avatar upload). */
   setMe: (me: Me) => void;
   refreshMe: () => Promise<void>;
+  /** Right after sign-up: interests picker + email verification before the tabs. */
+  pendingSetup: boolean;
+  completeSetup: () => void;
+  /** ACCOUNT_SUSPENDED reason (status === 'suspended'). */
+  suspendedReason: string | null;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -79,6 +85,8 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   const [me, setMeState] = useState<Me | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [bootAttempt, setBootAttempt] = useState(0);
+  const [pendingSetup, setPendingSetup] = useState(false);
+  const [suspendedReason, setSuspendedReason] = useState<string | null>(null);
   const mounted = useRef(true);
 
   const setMe = useCallback(
@@ -109,9 +117,18 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
       setMeState(null);
       setStatus('signedOut');
     });
+    const offSuspended = client.onSuspended(reason => {
+      setSuspendedReason(reason);
+      client.setTokens(null);
+      cacheMe(null);
+      qc.clear();
+      setMeState(null);
+      setStatus('suspended');
+    });
     return () => {
       mounted.current = false;
       off();
+      offSuspended();
     };
   }, [qc]);
 
@@ -181,11 +198,13 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   const register = useCallback(
     async (input: RegisterInput) => {
       await onAuth(await api.auth.register(input));
+      setPendingSetup(true);
     },
     [onAuth],
   );
 
   const logout = useCallback(async () => {
+    await unregisterPushToken();
     const rt = client.refreshToken;
     if (rt) {
       // Best effort: revoke the refresh token server-side.
@@ -195,6 +214,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   }, [clearSession]);
 
   const deleteAccount = useCallback(async () => {
+    await unregisterPushToken();
     await api.users.deleteMe();
     await clearSession();
   }, [clearSession]);
@@ -219,6 +239,9 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
       deleteAccount,
       setMe,
       refreshMe,
+      pendingSetup,
+      completeSetup: () => setPendingSetup(false),
+      suspendedReason,
     }),
     [
       status,
@@ -230,6 +253,8 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
       deleteAccount,
       setMe,
       refreshMe,
+      pendingSetup,
+      suspendedReason,
     ],
   );
 

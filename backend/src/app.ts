@@ -18,6 +18,11 @@ import { searchRouter } from './routes/search.js';
 import { conversationsRouter } from './routes/conversations.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { reportsRouter } from './routes/reports.js';
+import { commentsRouter } from './routes/comments.js';
+import { seriesRouter } from './routes/series.js';
+import { eventsRouter } from './routes/events.js';
+import { adminRouter } from './routes/admin.js';
+import { meRouter } from './routes/me.js';
 
 export function createApp() {
   const app = express();
@@ -70,7 +75,12 @@ export function createApp() {
   api.use('/conversations', conversationsRouter);
   api.use('/notifications', notificationsRouter);
   api.use('/reports', reportsRouter);
-  api.use(postsRouter); // /feed, /posts, /comments, /me/bookmarks
+  api.use('/admin', adminRouter);
+  api.use('/me', meRouter);
+  api.use(commentsRouter); // /posts/:id/comments, /comments/*
+  api.use(seriesRouter); // /series, /users/:id/series, /me/series/following
+  api.use(eventsRouter); // /communities/:id/events, /events, /me/events
+  api.use(postsRouter); // /feed, /posts, /hashtags, /me/bookmarks, /me/history
 
   app.use('/api/v1', api);
   app.use(notFoundHandler);

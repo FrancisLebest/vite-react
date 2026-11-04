@@ -1,23 +1,8 @@
 import {Dimensions, PixelRatio, Platform} from 'react-native';
 
-export const colors = {
-  primary: '#3B1FA8',
-  primaryDark: '#2A1580',
-  primaryLight: '#5B3FD6',
-  primarySoft: '#EEEAFB',
-  primaryTint: '#F6F4FD',
-  background: '#FFFFFF',
-  surface: '#F7F6FC',
-  border: '#E8E6F2',
-  text: '#16142B',
-  textSecondary: '#6B6880',
-  textMuted: '#9A97AD',
-  white: '#FFFFFF',
-  black: '#000000',
-  danger: '#E5484D',
-  success: '#2FB36B',
-  overlay: 'rgba(16, 12, 40, 0.55)',
-};
+import type {Palette} from './palette';
+
+export * from './palette';
 
 export const spacing = {
   xxs: 2,
@@ -66,15 +51,20 @@ export const weight = {
   bold: '700' as const,
 };
 
-export const shadow = Platform.select({
-  ios: {
-    shadowColor: '#2A1580',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: {width: 0, height: 4},
-  },
-  default: {elevation: 2},
-});
+export function shadowFor(c: Palette) {
+  return Platform.select({
+    ios: {
+      shadowColor: c.shadow,
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: {width: 0, height: 4},
+    },
+    default: {elevation: 2},
+  });
+}
 
 /** Max width for content columns so layouts stay readable on tablets / landscape. */
 export const MAX_CONTENT_WIDTH = 680;
+
+export {ThemeProvider, useTheme, makeStyles} from './ThemeProvider';
+export type {ThemeMode} from './ThemeProvider';

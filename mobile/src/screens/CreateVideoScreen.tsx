@@ -27,7 +27,7 @@ import {PickedMedia, pickVideo, recordVideo} from '../media/picker';
 import {useCreatePost} from '../query/createPost';
 import {useCategories} from '../query/hooks';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {useAppActive} from '../utils/hooks';
 import {duration} from '../utils/time';
 
@@ -37,6 +37,8 @@ export default function CreateVideoScreen({
   navigation,
   route,
 }: RootScreenProps<'CreateVideo'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {categories} = useCategories();
   const create = useCreatePost();
   const focused = useIsFocused();
@@ -231,7 +233,7 @@ export default function CreateVideoScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   flex: {flex: 1},
   header: {
     flexDirection: 'row',
@@ -240,10 +242,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: c.border,
   },
   spacer: {width: 70},
-  title: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
+  title: {fontSize: font.lg, fontWeight: weight.bold, color: c.text},
   choose: {
     flex: 1,
     alignItems: 'center',
@@ -253,13 +255,13 @@ const styles = StyleSheet.create({
   chooseTitle: {
     fontSize: font.xl,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.lg,
     textAlign: 'center',
   },
   chooseSub: {
     fontSize: font.md,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: spacing.xs,
     marginBottom: spacing.xl,
     textAlign: 'center',
@@ -273,20 +275,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.sm,
   },
-  meta: {fontSize: font.sm, color: colors.textSecondary},
+  meta: {fontSize: font.sm, color: c.textSecondary},
   change: {
     fontSize: font.sm,
-    color: colors.primary,
+    color: c.primary,
     fontWeight: weight.semibold,
   },
   progress: {marginTop: spacing.md},
   label: {
     fontSize: font.sm,
     fontWeight: weight.semibold,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
   labelPad: {paddingHorizontal: spacing.lg, marginTop: spacing.sm},
   footer: {padding: spacing.lg},
-});
+}));

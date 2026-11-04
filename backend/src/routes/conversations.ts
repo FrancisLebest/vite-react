@@ -10,6 +10,10 @@ import { MB, storeMedia, type StoredMedia } from '../media/process.js';
 import { deleteKeys } from '../storage/index.js';
 import { emitToUser } from '../realtime/socket.js';
 import { loadConversations, loadMessages } from '../services/hydrate.js';
+import { filterText } from '../lib/contentFilter.js';
+import { sendPush } from '../services/push.js';
+import { prefEnabledSql } from '../services/settings.js';
+import { recordShare, visiblePost } from './posts.js';
 
 export const conversationsRouter = Router();
 
@@ -44,6 +48,21 @@ async function hasBlockBetween(a: string, others: string[]): Promise<boolean> {
     [a, others],
   );
   return !!r.rowCount;
+}
+
+const DM_REFUSED = 'This user does not accept messages from you';
+
+/** Recipient's DM policy allows `sender` (or the recipient already wrote in their DM). */
+async function dmAllowed(senderId: string, recipientId: string): Promise<boolean> {
+  const r = await pool.query(
+    `SELECT u.dm_policy = 'everyone'
+            OR (u.dm_policy = 'followers' AND EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = $1 AND f.following_id = u.id))
+            OR EXISTS (SELECT 1 FROM conversations c JOIN messages m ON m.conversation_id = c.id AND m.sender_id = u.id
+                        WHERE c.dm_key = LEAST($1::text, u.id::text) || ':' || GREATEST($1::text, u.id::text)) AS ok
+       FROM users u WHERE u.id = $2`,
+    [senderId, recipientId],
+  );
+  return !!r.rows[0]?.ok;
 }
 
 // GET /conversations
@@ -108,6 +127,8 @@ conversationsRouter.post(
       if (!exists.rowCount) throw notFound('User');
       if (await hasBlockBetween(viewer, [body.userId])) throw forbidden('You cannot message this user');
       const dmKey = [viewer, body.userId].sort().join(':');
+      const existing = await pool.query('SELECT 1 FROM conversations WHERE dm_key = $1', [dmKey]);
+      if (!existing.rowCount && !(await dmAllowed(viewer, body.userId))) throw forbidden(DM_REFUSED);
       const { id, created } = await tx(async (c) => {
         const ins = await c.query(
           `INSERT INTO conversations (is_group, dm_key, created_by) VALUES (false, $1, $2)
@@ -133,6 +154,8 @@ conversationsRouter.post(
     const found = await pool.query('SELECT id FROM users WHERE id = ANY($1::uuid[])', [memberIds]);
     if (found.rowCount !== memberIds.length) throw notFound('User');
     if (await hasBlockBetween(viewer, memberIds)) throw forbidden('You cannot add a user you blocked or who blocked you');
+    for (const m of memberIds) if (!(await dmAllowed(viewer, m))) throw forbidden(DM_REFUSED);
+    body.title = filterText(body.title, 'title');
     const id = await tx(async (c) => {
       const r = await c.query(
         `INSERT INTO conversations (is_group, title, created_by, last_message_at) VALUES (true, $1, $2, NULL) RETURNING id`,
@@ -209,16 +232,22 @@ conversationsRouter.post(
   singleUpload('media', 100 * MB),
   h(async (req, res) => {
     const id = parse(uuid, req.params.id);
-    const { text } = parse(
-      z.object({ text: z.preprocess((v) => (v === undefined || v === null ? '' : v), z.string().trim().max(2000)) }),
+    const body = parse(
+      z.object({
+        text: z.preprocess((v) => (v === undefined || v === null ? '' : v), z.string().trim().max(2000)),
+        postId: z.preprocess((v) => (v === '' || v === null ? undefined : v), uuid.optional()),
+      }),
       req.body ?? {},
     );
+    const text = filterText(body.text, 'text');
     const viewer = me(req).id;
     const conv = await assertParticipant(id, viewer);
-    if (!text && !req.file) throw badRequest('Message text or media is required', [{ path: 'text', message: 'Required' }]);
+    if (!text && !req.file && !body.postId) throw badRequest('Message text or media is required', [{ path: 'text', message: 'Required' }]);
     const participants = await participantIds(id);
     const others = participants.filter((p) => p !== viewer);
     if (!conv.isGroup && (await hasBlockBetween(viewer, others))) throw forbidden('You cannot message this user');
+    if (!conv.isGroup && others[0] && !(await dmAllowed(viewer, others[0]))) throw forbidden(DM_REFUSED);
+    if (body.postId) await visiblePost(body.postId, viewer, { readyOnly: true });
 
     let media: StoredMedia | null = null;
     if (req.file) media = await storeMedia(req.file);
@@ -226,9 +255,9 @@ conversationsRouter.post(
     try {
       messageId = await tx(async (c) => {
         const r = await c.query(
-          `INSERT INTO messages (conversation_id, sender_id, text, media_kind, media_key, thumbnail_key, duration_sec, width, height)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, created_at`,
-          [id, viewer, text, media?.kind ?? null, media?.key ?? null, media?.thumbnailKey ?? null, media?.durationSec ?? null, media?.width ?? null, media?.height ?? null],
+          `INSERT INTO messages (conversation_id, sender_id, text, media_kind, media_key, thumbnail_key, duration_sec, width, height, shared_post_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, created_at`,
+          [id, viewer, text, media?.kind ?? null, media?.key ?? null, media?.thumbnailKey ?? null, media?.durationSec ?? null, media?.width ?? null, media?.height ?? null, body.postId ?? null],
         );
         await c.query('UPDATE conversations SET last_message_at = $2, updated_at = $2 WHERE id = $1', [id, r.rows[0].created_at]);
         await c.query('UPDATE conversation_participants SET last_read_at = $3 WHERE conversation_id = $1 AND user_id = $2', [
@@ -242,11 +271,13 @@ conversationsRouter.post(
       if (media) deleteKeys([media.key, media.thumbnailKey]);
       throw err;
     }
+    if (body.postId) await recordShare(body.postId);
     const [message] = await loadMessages(pool, [messageId], viewer);
     for (const uid of participants) {
       const payload = uid === viewer ? message : (await loadMessages(pool, [messageId], uid))[0];
       emitToUser(uid, 'message:new', { message: payload });
     }
+    await pushMessage(id, conv.isGroup, viewer, message!);
     res.status(201).json(message);
   }),
 );
@@ -268,3 +299,27 @@ conversationsRouter.post(
     res.status(204).end();
   }),
 );
+
+/** Push to participants who did not mute the conversation and enabled message pushes. */
+async function pushMessage(conversationId: string, isGroup: boolean, senderId: string, message: { sender: { name: string }; text: string; media: { kind: string } | null; post: unknown }) {
+  const { rows } = await pool.query(
+    `SELECT cp.user_id, c.title FROM conversation_participants cp
+       JOIN users u ON u.id = cp.user_id JOIN conversations c ON c.id = cp.conversation_id
+      WHERE cp.conversation_id = $1 AND cp.user_id <> $2 AND NOT cp.muted AND u.suspended_at IS NULL
+        AND ${prefEnabledSql('u', 'messages')} AND ${prefEnabledSql('u', 'push')}
+        AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id = u.id AND b.blocked_id = $2) OR (b.blocker_id = $2 AND b.blocked_id = u.id))`,
+    [conversationId, senderId],
+  );
+  if (!rows.length) return;
+  const preview =
+    message.text ||
+    (message.media ? { image: '📷 Photo', video: '🎬 Video', audio: '🎤 Audio' }[message.media.kind] ?? 'Media' : message.post ? 'Shared a post' : '');
+  sendPush(
+    rows.map((r) => r.user_id),
+    {
+      title: isGroup ? `${message.sender.name} · ${rows[0].title ?? 'Group'}` : message.sender.name,
+      body: preview,
+      data: { type: 'message', conversationId, actorId: senderId },
+    },
+  );
+}

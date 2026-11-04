@@ -29,12 +29,14 @@ import {
 import {useUsers} from '../query/hooks';
 import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, spacing, weight} from '../theme';
+import {font, makeStyles, spacing, useTheme, weight} from '../theme';
 import {useDebounced} from '../utils/hooks';
 
 export default function NewMessageScreen({
   navigation,
 }: RootScreenProps<'NewMessage'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {me} = useAuth();
   const qc = useQueryClient();
   const [query, setQuery] = useState('');
@@ -178,7 +180,7 @@ export default function NewMessageScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -186,16 +188,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
-  title: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
+  title: {fontSize: font.lg, fontWeight: weight.bold, color: c.text},
   search: {marginHorizontal: spacing.lg},
   selectedScroll: {flexGrow: 0},
   selected: {paddingHorizontal: spacing.lg, paddingTop: spacing.sm},
   groupName: {marginHorizontal: spacing.lg},
   hint: {
     fontSize: font.sm,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
   grow: {flexGrow: 1},
-});
+}));

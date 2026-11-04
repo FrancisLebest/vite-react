@@ -28,7 +28,7 @@ import {
 import {useCommunities} from '../query/hooks';
 import {useUnreadCounts} from '../query/messaging';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {useResponsive} from '../utils/responsive';
 
 type KindFilter = 'all' | CommunityKind;
@@ -36,6 +36,8 @@ type KindFilter = 'all' | CommunityKind;
 export default function CommunitiesScreen({
   navigation,
 }: RootScreenProps<'Communities'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const unread = useUnreadCounts();
   const {contentWidth} = useResponsive();
   const listRef = useRef<FlatList<Community>>(null);
@@ -212,7 +214,7 @@ export default function CommunitiesScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   ml: {marginLeft: spacing.sm},
   scroll: {paddingBottom: spacing.xl},
   hero: {
@@ -223,7 +225,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   heroBody: {flex: 1, marginRight: spacing.sm},
-  heroTitle: {color: colors.white, fontSize: font.xl, fontWeight: weight.bold},
+  heroTitle: {color: c.white, fontSize: font.xl, fontWeight: weight.bold},
   heroSub: {
     color: 'rgba(255,255,255,0.85)',
     fontSize: font.sm,
@@ -232,7 +234,7 @@ const styles = StyleSheet.create({
   heroBtn: {
     alignSelf: 'flex-start',
     marginTop: spacing.md,
-    borderColor: colors.white,
+    borderColor: c.white,
   },
   cards: {paddingHorizontal: spacing.lg, paddingBottom: spacing.sm},
   more: {alignSelf: 'center', marginTop: spacing.sm},
@@ -242,7 +244,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    backgroundColor: colors.white,
+    borderTopColor: c.border,
+    backgroundColor: c.white,
   },
-});
+}));

@@ -28,7 +28,31 @@ import type {
   User,
   UserSummary,
   UsersParams,
+  Analytics,
+  AnalyticsRange,
+  CommunityEvent,
+  FollowRequest,
+  FollowStatus,
+  HashtagPage,
+  HistoryEntry,
+  Poll,
+  PollInput,
+  Report,
+  ReportStatus,
+  RsvpStatus,
+  Series,
+  SeriesDetail,
+  Settings,
+  SettingsPatch,
+  VerificationRequest,
+  VerificationStatus,
 } from './types';
+
+export type FollowResult = {
+  isFollowing: boolean;
+  followStatus?: FollowStatus;
+  followerCount: number;
+};
 
 const enc = encodeURIComponent;
 
@@ -47,6 +71,24 @@ export interface CreatePostInput {
   category: CategoryId;
   communityId?: string;
   media?: UploadFile;
+  /** v1.1 — only for type=post */
+  poll?: PollInput;
+}
+
+export interface SeriesInput {
+  title: string;
+  description?: string;
+  category: CategoryId;
+  cover?: UploadFile;
+}
+
+export interface EventInput {
+  title: string;
+  description?: string;
+  startsAt: string;
+  endsAt?: string | null;
+  location?: string | null;
+  onlineUrl?: string | null;
 }
 
 export interface CommunityInput {
@@ -111,13 +153,9 @@ export function createEndpoints(c: ApiClient) {
       },
       deleteMe: () => c.delete<void>('/users/me'),
       follow: (id: string) =>
-        c.post<{isFollowing: boolean; followerCount: number}>(
-          `/users/${enc(id)}/follow`,
-        ),
+        c.post<FollowResult>(`/users/${enc(id)}/follow`),
       unfollow: (id: string) =>
-        c.delete<{isFollowing: boolean; followerCount: number}>(
-          `/users/${enc(id)}/follow`,
-        ),
+        c.delete<FollowResult>(`/users/${enc(id)}/follow`),
       followers: (id: string, cursor?: string) =>
         c.get<Page<UserSummary>>(`/users/${enc(id)}/followers`, {cursor}),
       following: (id: string, cursor?: string) =>
@@ -144,6 +182,10 @@ export function createEndpoints(c: ApiClient) {
         if (input.media) {
           form.append('media', input.media as unknown as Blob);
         }
+        if (input.poll) {
+          // multipart → the poll is a JSON string (docs/API.md §4a)
+          form.append('poll', JSON.stringify(input.poll));
+        }
         return c.upload<Post>('POST', '/posts', form, opts);
       },
       get: (id: string) => c.get<Post>(`/posts/${enc(id)}`),
@@ -165,8 +207,8 @@ export function createEndpoints(c: ApiClient) {
       view: (id: string) => c.post<void>(`/posts/${enc(id)}/view`),
       comments: (id: string, cursor?: string) =>
         c.get<Page<Comment>>(`/posts/${enc(id)}/comments`, {cursor}),
-      addComment: (id: string, text: string) =>
-        c.post<Comment>(`/posts/${enc(id)}/comments`, {text}),
+      addComment: (id: string, text: string, parentId?: string) =>
+        c.post<Comment>(`/posts/${enc(id)}/comments`, {text, parentId}),
       deleteComment: (commentId: string) =>
         c.delete<void>(`/comments/${enc(commentId)}`),
       bookmarks: (cursor?: string) =>
@@ -234,8 +276,8 @@ export function createEndpoints(c: ApiClient) {
         c.patch<Conversation>(`/conversations/${enc(id)}`, body),
       messages: (id: string, cursor?: string) =>
         c.get<Page<Message>>(`/conversations/${enc(id)}/messages`, {cursor}),
-      send: (id: string, text: string) =>
-        c.post<Message>(`/conversations/${enc(id)}/messages`, {text}),
+      send: (id: string, text: string, postId?: string) =>
+        c.post<Message>(`/conversations/${enc(id)}/messages`, {text, postId}),
       sendMedia: (
         id: string,
         text: string,

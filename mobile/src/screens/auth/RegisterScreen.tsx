@@ -7,15 +7,17 @@ import {UniversityField} from '../../components/UniversityField';
 import {Chip, PillButton, TextField} from '../../components/ui';
 import {ROLES} from '../../constants/categories';
 import type {RootScreenProps} from '../../navigation/types';
-import {colors, font, spacing, weight} from '../../theme';
+import {font, makeStyles, spacing, weight} from '../../theme';
 import {Errors, hasErrors, validators} from '../../utils/validation';
-import {AuthLayout, FormError, authStyles} from './AuthLayout';
+import {AuthLayout, FormError, useAuthStyles} from './AuthLayout';
 
 type Field = 'name' | 'username' | 'email' | 'password';
 
 export default function RegisterScreen({
   navigation,
 }: RootScreenProps<'Register'>) {
+  const authStyles = useAuthStyles();
+  const styles = useStyles();
   const {register} = useAuth();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -152,13 +154,13 @@ export default function RegisterScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   label: {
     fontSize: font.sm,
     fontWeight: weight.semibold,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   roles: {flexDirection: 'row', flexWrap: 'wrap'},
-});
+}));

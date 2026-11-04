@@ -14,11 +14,13 @@ import {
 import {useCursorList} from '../query/hooks';
 import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
-import {colors} from '../theme';
+import {makeStyles, useTheme} from '../theme';
 
 export default function FollowListScreen({
   route,
 }: RootScreenProps<'FollowList'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {userId, kind, title} = route.params;
   const list = useCursorList<UserSummary>(
     kind === 'followers' ? qk.followers(userId) : qk.following(userId),
@@ -71,4 +73,4 @@ export default function FollowListScreen({
   );
 }
 
-const styles = StyleSheet.create({grow: {flexGrow: 1}});
+const useStyles = makeStyles(c => ({grow: {flexGrow: 1}}));

@@ -50,6 +50,27 @@ export type RootStackParamList = {
   ChangePassword: undefined;
   BlockedUsers: undefined;
   FollowList: {userId: string; kind: 'followers' | 'following'; title?: string};
+
+  /* ---- v1.1 ---- */
+  Onboarding: {fromSettings?: boolean} | undefined;
+  VerifyEmail: undefined;
+  Hashtag: {tag: string};
+  EditPost: {postId: string};
+  SharePost: {postId: string};
+  History: undefined;
+  Saved: undefined;
+  SeriesDetail: {seriesId: string};
+  SeriesEditor: {seriesId?: string} | undefined;
+  PrivacySettings: undefined;
+  NotificationSettings: undefined;
+  FollowRequests: undefined;
+  Analytics: undefined;
+  RequestVerification: undefined;
+  Admin: undefined;
+  ReportDetail: {reportId: string};
+  CreateEvent: {communityId: string; eventId?: string};
+  EventDetail: {eventId: string};
+  MyEvents: undefined;
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> =

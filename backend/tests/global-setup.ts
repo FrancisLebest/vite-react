@@ -36,5 +36,10 @@ export default async function setup() {
   if (!fs.existsSync(audio)) {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'sine=frequency=300:duration=2', '-c:a', 'aac', audio]);
   }
+  // iPhone-like HEVC .mov (1280x960), must be transcoded to H.264 720p.
+  const hevc = path.join(FIXTURES, 'hevc.mov');
+  if (!fs.existsSync(hevc)) {
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc=duration=2:size=1280x960:rate=10', '-f', 'lavfi', '-i', 'sine=frequency=500:duration=2', '-c:v', 'libx265', '-x265-params', 'log-level=error', '-tag:v', 'hvc1', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', hevc]);
+  }
   fs.writeFileSync(path.join(FIXTURES, 'fake.mp4'), 'this is not a video');
 }

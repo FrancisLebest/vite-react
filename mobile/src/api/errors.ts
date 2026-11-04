@@ -21,6 +21,7 @@ const STATUS_CODES: Record<number, ErrorCode> = {
 };
 
 const DEFAULT_MESSAGES: Record<ApiErrorCode, string> = {
+  ACCOUNT_SUSPENDED: 'Your account has been suspended.',
   VALIDATION_ERROR: 'Some fields are invalid.',
   UNAUTHORIZED: 'Your session has expired. Please sign in again.',
   FORBIDDEN: "You don't have permission to do that.",

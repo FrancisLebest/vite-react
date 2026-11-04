@@ -4,7 +4,7 @@ import {api, errorMessage, isApiError} from '../../api';
 import {PillButton, TextField} from '../../components/ui';
 import type {RootScreenProps} from '../../navigation/types';
 import {Errors, hasErrors, validators} from '../../utils/validation';
-import {AuthLayout, FormError, authStyles} from './AuthLayout';
+import {AuthLayout, FormError, useAuthStyles} from './AuthLayout';
 
 type Field = 'code' | 'password' | 'confirm';
 
@@ -12,6 +12,7 @@ export default function ResetPasswordScreen({
   navigation,
   route,
 }: RootScreenProps<'ResetPassword'>) {
+  const authStyles = useAuthStyles();
   const {email} = route.params;
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');

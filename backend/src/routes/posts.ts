@@ -275,7 +275,6 @@ postsRouter.post(
       if (media) deleteKeys([media.key, media.thumbnailKey]);
       throw err;
     }
-    if (asyncVideo) await enqueueVideo(postId);
     await notifyMentions(
       extractMentions(text),
       viewer,
@@ -283,6 +282,7 @@ postsRouter.post(
       body.type === 'video' ? 'mentioned you in a video' : 'mentioned you in a post',
     );
     const [post] = await loadPosts(pool, [postId], viewer);
+    if (asyncVideo) await enqueueVideo(postId);
     res.status(201).json(post);
   }),
 );

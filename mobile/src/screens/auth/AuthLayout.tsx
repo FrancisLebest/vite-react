@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import {BackHeader, Logo, Screen} from '../../components/ui';
-import {colors, font, spacing, weight} from '../../theme';
+import {font, makeStyles, spacing, weight} from '../../theme';
 
 export function AuthLayout({
   title,
@@ -21,6 +21,7 @@ export function AuthLayout({
   back?: boolean;
   children: React.ReactNode;
 }) {
+  const styles = useStyles();
   return (
     <Screen edges={['top', 'bottom']}>
       {back ? <BackHeader /> : null}
@@ -45,6 +46,7 @@ export function AuthLayout({
 }
 
 export function FormError({message}: {message?: string | null}) {
+  const styles = useStyles();
   if (!message) {
     return null;
   }
@@ -55,31 +57,31 @@ export function FormError({message}: {message?: string | null}) {
   );
 }
 
-export const authStyles = StyleSheet.create({
+export const useAuthStyles = makeStyles(c => ({
   submit: {marginTop: spacing.xl},
   linkRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: spacing.xl,
   },
-  linkMuted: {color: colors.textSecondary, fontSize: font.md},
-  link: {color: colors.primary, fontWeight: weight.semibold, fontSize: font.md},
+  linkMuted: {color: c.textSecondary, fontSize: font.md},
+  link: {color: c.primary, fontWeight: weight.semibold, fontSize: font.md},
   right: {alignSelf: 'flex-end', marginTop: spacing.sm, paddingVertical: 4},
-});
+}));
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   flex: {flex: 1},
   scroll: {padding: spacing.xl, paddingTop: spacing.sm, flexGrow: 1},
   head: {marginBottom: spacing.md},
   title: {
     fontSize: font.title,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.md,
   },
   subtitle: {
     fontSize: font.md,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: spacing.xs,
   },
   formError: {
@@ -88,5 +90,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FDECEC',
   },
-  formErrorText: {color: colors.danger, fontSize: font.sm},
-});
+  formErrorText: {color: c.danger, fontSize: font.sm},
+}));

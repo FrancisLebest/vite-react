@@ -17,7 +17,7 @@ metaRouter.get(
   requireAuth,
   h(async (_req, res) => {
     const { rows } = await pool.query(
-      `SELECT category, count(*)::int AS n FROM posts WHERE created_at > now() - interval '7 days' GROUP BY category`,
+      `SELECT category, count(*)::int AS n FROM posts WHERE status = 'ready' AND created_at > now() - interval '7 days' GROUP BY category`,
     );
     const counts = new Map(rows.map((r) => [r.category as string, r.n as number]));
     const topics = CATEGORIES.map((c, i) => ({ ...c, postCount: counts.get(c.id) ?? 0, _i: i }))
@@ -38,7 +38,7 @@ metaRouter.get(
     const { rows } = await pool.query(
       `SELECT tag, count(*)::int AS "postCount"
          FROM posts, unnest(hashtags) AS tag
-        WHERE created_at > now() - interval '7 days'
+        WHERE status = 'ready' AND created_at > now() - interval '7 days'
         GROUP BY tag ORDER BY count(*) DESC, max(created_at) DESC LIMIT $1`,
       [limit],
     );

@@ -4,7 +4,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Icon, Logo, PillButton} from '../../components/ui';
 import type {RootScreenProps} from '../../navigation/types';
-import {MAX_CONTENT_WIDTH, colors, font, spacing, weight} from '../../theme';
+import {font, makeStyles, spacing, useTheme, weight, MAX_CONTENT_WIDTH} from '../../theme';
 
 const POINTS = [
   {
@@ -18,6 +18,8 @@ const POINTS = [
 export default function WelcomeScreen({
   navigation,
 }: RootScreenProps<'Welcome'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   return (
     <LinearGradient
       colors={[colors.primaryLight, colors.primary, colors.primaryDark]}
@@ -58,7 +60,7 @@ export default function WelcomeScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   flex: {flex: 1},
   column: {
     flex: 1,
@@ -73,12 +75,12 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.title + 6,
     fontWeight: weight.bold,
     marginTop: spacing.lg,
@@ -90,10 +92,10 @@ const styles = StyleSheet.create({
   },
   point: {flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg},
   pointText: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.md,
     marginLeft: spacing.md,
     flex: 1,
   },
   second: {marginTop: spacing.md},
-});
+}));

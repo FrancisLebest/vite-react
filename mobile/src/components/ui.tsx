@@ -16,14 +16,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {mediaUrl} from '../config';
-import {
-  MAX_CONTENT_WIDTH,
-  colors,
-  font,
-  radius,
-  spacing,
-  weight,
-} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight, MAX_CONTENT_WIDTH} from '../theme';
 
 export {Icon};
 
@@ -33,11 +26,13 @@ export {Icon};
 
 export function Logo({
   size = 30,
-  color = colors.primary,
+  color: colorProp,
 }: {
   size?: number;
   color?: string;
 }) {
+  const {colors} = useTheme();
+  const color = colorProp ?? colors.primary;
   return (
     <Icon
       name="school"
@@ -68,6 +63,8 @@ export function Avatar({
   ring?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const src = mediaUrl(uri);
   const initials = (name ?? '')
     .split(/\s+/)
@@ -125,7 +122,7 @@ export function Avatar({
 /** Round avatar replacement for groups / communities (icon on tinted circle). */
 export function IconAvatar({
   name,
-  color = colors.primary,
+  color: colorProp,
   size = 44,
   filled,
 }: {
@@ -134,6 +131,9 @@ export function IconAvatar({
   size?: number;
   filled?: boolean;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
+  const color = colorProp ?? colors.primary;
   return (
     <View
       style={{
@@ -160,7 +160,7 @@ export function IconButton({
   name,
   onPress,
   size = 24,
-  color = colors.text,
+  color: colorProp,
   badge,
   label,
   style,
@@ -173,6 +173,9 @@ export function IconButton({
   label: string;
   style?: StyleProp<ViewStyle>;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
+  const color = colorProp ?? colors.text;
   return (
     <Pressable
       onPress={onPress}
@@ -197,6 +200,7 @@ export function Badge({
   count: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const styles = useStyles();
   return (
     <View style={[styles.badge, style]}>
       <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>
@@ -227,6 +231,8 @@ export function PillButton({
   loading?: boolean;
   accessibilityLabel?: string;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const fg =
     variant === 'solid'
       ? colors.white
@@ -278,6 +284,7 @@ export function FollowButton({
   onPress: () => void;
   small?: boolean;
 }) {
+  const styles = useStyles();
   return (
     <PillButton
       small={small}
@@ -296,6 +303,7 @@ export function JoinButton({
   joined: boolean;
   onPress: () => void;
 }) {
+  const styles = useStyles();
   return (
     <PillButton
       small
@@ -322,6 +330,7 @@ export function Chip({
   onPress?: () => void;
   badge?: number;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -353,6 +362,7 @@ export function ChipRow<T extends string>({
   badges?: Partial<Record<T, number>>;
   style?: StyleProp<ViewStyle>;
 }) {
+  const styles = useStyles();
   return (
     <ScrollView
       horizontal
@@ -381,6 +391,8 @@ export function SearchInput({
   onClear,
   ...props
 }: TextInputProps & {style?: StyleProp<ViewStyle>; onClear?: () => void}) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   return (
     <View style={[styles.search, style]}>
       <Icon name="search" size={18} color={colors.textMuted} />
@@ -417,6 +429,8 @@ export function SectionHeader({
   onSeeAll?: () => void;
   emoji?: string;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle} accessibilityRole="header">
@@ -442,6 +456,7 @@ export function ScreenHeader({
   right?: React.ReactNode;
   showLogo?: boolean;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -461,6 +476,7 @@ export function ScreenHeader({
 }
 
 export function VerifiedBadge({size = 14}: {size?: number}) {
+  const {colors} = useTheme();
   return (
     <Icon
       name="checkmark-circle"
@@ -482,6 +498,7 @@ export function EmptyState({
   message?: string;
   action?: {label: string; onPress: () => void};
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.empty}>
       <IconAvatar name={icon} size={64} />
@@ -499,22 +516,23 @@ export function EmptyState({
 }
 
 export function Divider() {
+  const styles = useStyles();
   return <View style={styles.divider} />;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   pressed: {opacity: 0.6},
   center: {alignItems: 'center', justifyContent: 'center'},
-  avatar: {backgroundColor: colors.primarySoft},
-  initials: {color: colors.primary, fontWeight: weight.bold},
-  avatarRing: {borderWidth: 2, borderColor: colors.white},
+  avatar: {backgroundColor: c.primarySoft},
+  initials: {color: c.primary, fontWeight: weight.bold},
+  avatarRing: {borderWidth: 2, borderColor: c.white},
   onlineDot: {
     position: 'absolute',
     right: 0,
     bottom: 0,
-    backgroundColor: colors.success,
+    backgroundColor: c.success,
     borderWidth: 2,
-    borderColor: colors.white,
+    borderColor: c.white,
   },
   iconButton: {padding: spacing.xs},
   iconBadge: {position: 'absolute', top: -2, right: -4},
@@ -523,13 +541,13 @@ const styles = StyleSheet.create({
     height: 18,
     paddingHorizontal: 4,
     borderRadius: 9,
-    backgroundColor: colors.danger,
+    backgroundColor: c.danger,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: colors.white,
+    borderColor: c.white,
   },
-  badgeText: {color: colors.white, fontSize: 10, fontWeight: weight.bold},
+  badgeText: {color: c.white, fontSize: 10, fontWeight: weight.bold},
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -539,13 +557,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   pillSmall: {height: 32, paddingHorizontal: spacing.lg},
-  pillSolid: {backgroundColor: colors.primary},
+  pillSolid: {backgroundColor: c.primary},
   pillOutline: {
     borderWidth: 1.5,
-    borderColor: colors.primary,
-    backgroundColor: colors.white,
+    borderColor: c.primary,
+    backgroundColor: c.white,
   },
-  pillSoft: {backgroundColor: colors.primarySoft},
+  pillSoft: {backgroundColor: c.primarySoft},
   pillIcon: {marginRight: spacing.sm},
   pillText: {fontSize: font.lg, fontWeight: weight.semibold},
   pillTextSmall: {fontSize: font.sm},
@@ -559,30 +577,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     height: 36,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     marginRight: spacing.sm,
   },
-  chipActive: {backgroundColor: colors.primary, borderColor: colors.primary},
-  chipText: {fontSize: font.sm, color: colors.text, fontWeight: weight.medium},
-  chipTextActive: {color: colors.white, fontWeight: weight.semibold},
+  chipActive: {backgroundColor: c.primary, borderColor: c.primary},
+  chipText: {fontSize: font.sm, color: c.text, fontWeight: weight.medium},
+  chipTextActive: {color: c.white, fontWeight: weight.semibold},
   chipBadge: {marginLeft: spacing.xs},
   search: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 44,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing.md,
   },
   searchInput: {
     flex: 1,
     marginHorizontal: spacing.sm,
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
     paddingVertical: 0, // Android adds vertical padding by default
   },
   section: {
@@ -596,10 +614,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: font.xl,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
   },
   seeAll: {flexDirection: 'row', alignItems: 'center'},
-  seeAllText: {fontSize: font.sm, color: colors.textSecondary, marginRight: 2},
+  seeAllText: {fontSize: font.sm, color: c.textSecondary, marginRight: 2},
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -612,7 +630,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: font.xxl,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginLeft: spacing.md,
     flexShrink: 1,
   },
@@ -621,19 +639,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: font.lg,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.lg,
     textAlign: 'center',
   },
   emptyMessage: {
     fontSize: font.md,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: spacing.xs,
     textAlign: 'center',
   },
   emptyAction: {marginTop: spacing.lg},
-  divider: {height: StyleSheet.hairlineWidth, backgroundColor: colors.border},
-});
+  divider: {height: StyleSheet.hairlineWidth, backgroundColor: c.border},
+}));
 
 /* ------------------------------------------------------------------ */
 /* Screen containers                                                   */
@@ -652,6 +670,7 @@ export function Screen({
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
   style?: StyleProp<ViewStyle>;
 }) {
+  const screenStyles = useScreenStyles();
   return (
     <SafeAreaView edges={edges} style={screenStyles.safe}>
       <View style={[screenStyles.column, style]}>{children}</View>
@@ -668,6 +687,7 @@ export function BackHeader({
   right?: React.ReactNode;
   children?: React.ReactNode;
 }) {
+  const screenStyles = useScreenStyles();
   const navigation = useNavigation();
   return (
     <View style={screenStyles.backHeader}>
@@ -690,8 +710,8 @@ export function BackHeader({
   );
 }
 
-const screenStyles = StyleSheet.create({
-  safe: {flex: 1, backgroundColor: colors.background},
+const useScreenStyles = makeStyles(c => ({
+  safe: {flex: 1, backgroundColor: c.background},
   column: {
     flex: 1,
     width: '100%',
@@ -709,7 +729,7 @@ const screenStyles = StyleSheet.create({
     flex: 1,
     fontSize: font.xl,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginLeft: spacing.sm,
   },
   backRight: {
@@ -717,7 +737,7 @@ const screenStyles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: spacing.sm,
   },
-});
+}));
 
 /* ------------------------------------------------------------------ */
 /* Async states                                                        */
@@ -732,6 +752,8 @@ export function LoadingState({
   dark?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const stateStyles = useStateStyles();
+  const {colors} = useTheme();
   return (
     <View
       style={[stateStyles.center, style]}
@@ -753,6 +775,7 @@ export function ErrorState({
   dark?: boolean;
   title?: string;
 }) {
+  const stateStyles = useStateStyles();
   return (
     <View style={stateStyles.center} accessibilityRole="alert">
       <IconAvatar name="cloud-offline-outline" size={64} />
@@ -787,6 +810,8 @@ export function ListFooter({
   error?: boolean;
   onRetry?: () => void;
 }) {
+  const stateStyles = useStateStyles();
+  const {colors} = useTheme();
   if (loading) {
     return (
       <View style={stateStyles.footer}>
@@ -816,6 +841,7 @@ export function ProgressBar({
   progress: number;
   label?: string;
 }) {
+  const stateStyles = useStateStyles();
   const pct = Math.round(Math.min(Math.max(progress, 0), 1) * 100);
   return (
     <View
@@ -853,6 +879,8 @@ export function TextField({
   style?: StyleProp<ViewStyle>;
   inputStyle?: TextInputProps['style'];
 }) {
+  const fieldStyles = useFieldStyles();
+  const {colors} = useTheme();
   const [hidden, setHidden] = React.useState(!!secure);
   return (
     <View style={[fieldStyles.wrap, style]}>
@@ -896,7 +924,7 @@ export function TextField({
   );
 }
 
-const stateStyles = StyleSheet.create({
+const useStateStyles = makeStyles(c => ({
   center: {
     flexGrow: 1,
     alignItems: 'center',
@@ -906,43 +934,43 @@ const stateStyles = StyleSheet.create({
   title: {
     fontSize: font.lg,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.lg,
     textAlign: 'center',
   },
   message: {
     fontSize: font.md,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: spacing.xs,
     textAlign: 'center',
   },
-  light: {color: colors.white},
+  light: {color: c.white},
   lightMuted: {color: 'rgba(255,255,255,0.8)'},
   retry: {marginTop: spacing.lg},
   footer: {paddingVertical: spacing.xl, alignItems: 'center'},
   footerSpacer: {height: spacing.xl},
-  footerRetry: {color: colors.primary, fontWeight: weight.semibold},
+  footerRetry: {color: c.primary, fontWeight: weight.semibold},
   track: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: c.primarySoft,
     overflow: 'hidden',
   },
-  bar: {height: 8, borderRadius: 4, backgroundColor: colors.primary},
+  bar: {height: 8, borderRadius: 4, backgroundColor: c.primary},
   pct: {
     marginTop: spacing.xs,
     fontSize: font.sm,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     textAlign: 'right',
   },
-});
+}));
 
-const fieldStyles = StyleSheet.create({
+const useFieldStyles = makeStyles(c => ({
   wrap: {marginTop: spacing.md},
   label: {
     fontSize: font.sm,
     fontWeight: weight.semibold,
-    color: colors.text,
+    color: c.text,
     marginBottom: spacing.xs,
   },
   box: {
@@ -950,19 +978,19 @@ const fieldStyles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 48,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
   },
-  boxError: {borderColor: colors.danger},
+  boxError: {borderColor: c.danger},
   input: {
     flex: 1,
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
     paddingVertical: spacing.sm,
   },
   multiline: {minHeight: 96, textAlignVertical: 'top'},
-  error: {color: colors.danger, fontSize: font.sm, marginTop: 4},
-  hint: {color: colors.textMuted, fontSize: font.xs, marginTop: 4},
-});
+  error: {color: c.danger, fontSize: font.sm, marginTop: 4},
+  hint: {color: c.textMuted, fontSize: font.xs, marginTop: 4},
+}));

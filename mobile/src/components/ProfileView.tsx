@@ -21,7 +21,7 @@ import {
   useUser,
   useUserPosts,
 } from '../query/hooks';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {formatCount, useResponsive} from '../utils/responsive';
 import {CommunityRow, GridTile, PostCard} from './items';
 import {confirmDestructive, useReport, useSheet} from './Sheet';
@@ -80,6 +80,8 @@ function ProfileContent({
   isMe: boolean;
   onRefresh: () => void;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const navigation = useNavigation();
   const qc = useQueryClient();
   const openSheet = useSheet();
@@ -399,6 +401,7 @@ function Stat({
   label: string;
   onPress?: () => void;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       style={styles.stat}
@@ -412,11 +415,11 @@ function Stat({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   scroll: {paddingBottom: spacing.xxxl},
   cover: {
     height: 96,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: c.primarySoft,
     marginHorizontal: spacing.lg,
     borderRadius: radius.lg,
   },
@@ -426,18 +429,18 @@ const styles = StyleSheet.create({
   name: {
     fontSize: font.xxl,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginRight: 6,
   },
   handle: {
     fontSize: font.sm,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: 2,
     textAlign: 'center',
   },
   bio: {
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.sm,
     textAlign: 'center',
   },
@@ -448,19 +451,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignSelf: 'stretch',
   },
   stat: {flex: 1, alignItems: 'center'},
-  statValue: {fontSize: font.xl, fontWeight: weight.bold, color: colors.text},
-  statLabel: {fontSize: font.xs, color: colors.textSecondary, marginTop: 2},
-  statDivider: {width: 1, height: 28, backgroundColor: colors.border},
+  statValue: {fontSize: font.xl, fontWeight: weight.bold, color: c.text},
+  statLabel: {fontSize: font.xs, color: c.textSecondary, marginTop: 2},
+  statDivider: {width: 1, height: 28, backgroundColor: c.border},
   mutual: {
     fontSize: font.xs,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: spacing.sm,
   },
   actions: {flexDirection: 'row', alignItems: 'center', marginTop: spacing.lg},
   actionBtn: {marginHorizontal: spacing.xs},
   tabs: {marginTop: spacing.lg, paddingBottom: spacing.sm},
-});
+}));

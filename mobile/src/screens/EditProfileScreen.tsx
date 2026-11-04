@@ -27,7 +27,7 @@ import {
 import {ROLES} from '../constants/categories';
 import {MAX_AVATAR_BYTES, pickImage, takePhoto} from '../media/picker';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, spacing, weight} from '../theme';
+import {font, makeStyles, spacing, useTheme, weight} from '../theme';
 import {Errors, hasErrors, validators} from '../utils/validation';
 import {FormError} from './auth/AuthLayout';
 
@@ -36,6 +36,8 @@ type Field = 'name' | 'username';
 export default function EditProfileScreen({
   navigation,
 }: RootScreenProps<'EditProfile'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const me = useMe();
   const {setMe} = useAuth();
   const openSheet = useSheet();
@@ -216,7 +218,7 @@ export default function EditProfileScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   flex: {flex: 1},
   header: {
     flexDirection: 'row',
@@ -225,9 +227,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: c.border,
   },
-  title: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
+  title: {fontSize: font.lg, fontWeight: weight.bold, color: c.text},
   scroll: {padding: spacing.lg},
   avatarWrap: {alignSelf: 'center'},
   camera: {
@@ -237,24 +239,24 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     borderWidth: 2,
-    borderColor: colors.white,
+    borderColor: c.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
   change: {
     textAlign: 'center',
-    color: colors.primary,
+    color: c.primary,
     fontWeight: weight.semibold,
     marginTop: spacing.sm,
   },
   label: {
     fontSize: font.sm,
     fontWeight: weight.semibold,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   roles: {flexDirection: 'row', flexWrap: 'wrap'},
-});
+}));

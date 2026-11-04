@@ -1,6 +1,14 @@
 apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
 
+// Firebase is optional: without google-services.json the app builds and runs,
+// push notifications are simply disabled (see README → "Notifications push").
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+} else {
+    logger.warn("StudyHub: android/app/google-services.json not found → push notifications disabled")
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.

@@ -14,11 +14,13 @@ import {
 import {qk} from '../query/keys';
 import {useNotifications} from '../query/messaging';
 import type {RootScreenProps} from '../navigation/types';
-import {colors} from '../theme';
+import {makeStyles, useTheme} from '../theme';
 
 export default function NotificationsScreen(
   _props: RootScreenProps<'Notifications'>,
 ) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const qc = useQueryClient();
   const list = useNotifications();
   // Ids that were unread when the screen opened stay highlighted during this visit.
@@ -92,4 +94,4 @@ export default function NotificationsScreen(
   );
 }
 
-const styles = StyleSheet.create({grow: {flexGrow: 1}});
+const useStyles = makeStyles(c => ({grow: {flexGrow: 1}}));

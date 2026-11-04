@@ -4,7 +4,8 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { pool, tx } from '../db/pool.js';
-import { badRequest, conflict, unauthorized } from '../lib/errors.js';
+import { badRequest, conflict, suspended, unauthorized } from '../lib/errors.js';
+import { filterText } from '../lib/contentFilter.js';
 import { sendMail } from '../lib/mailer.js';
 import { issueTokens, revokeAllUserTokens, revokeRefreshToken, rotateRefreshToken, sha256 } from '../lib/tokens.js';
 import { nullableTrimmed, parse } from '../lib/validate.js';
@@ -51,6 +52,31 @@ function codeHash(email: string, code: string) {
   return sha256(`${config.JWT_SECRET}:${email.toLowerCase()}:${code}`);
 }
 
+const VERIFY_CODE_TTL_HOURS = 24;
+
+function verifyHash(userId: string, code: string) {
+  return sha256(`${config.JWT_SECRET}:verify:${userId}:${code}`);
+}
+
+/** Creates a new e-mail verification code (invalidating previous ones) and mails it. */
+async function sendVerificationCode(userId: string): Promise<void> {
+  const { rows } = await pool.query('SELECT name, email FROM users WHERE id = $1', [userId]);
+  const user = rows[0];
+  const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+  await tx(async (c) => {
+    await c.query('UPDATE email_verifications SET used_at = now() WHERE user_id = $1 AND used_at IS NULL', [userId]);
+    await c.query(
+      `INSERT INTO email_verifications (user_id, code_hash, expires_at) VALUES ($1, $2, now() + make_interval(hours => $3))`,
+      [userId, verifyHash(userId, code), VERIFY_CODE_TTL_HOURS],
+    );
+  });
+  void sendMail(
+    user.email,
+    'StudyHub – vérifiez votre adresse e-mail / verify your e-mail',
+    `Bonjour ${user.name},\n\nVotre code de vérification StudyHub est : ${code}\nIl expire dans ${VERIFY_CODE_TTL_HOURS} heures.\n\nYour StudyHub verification code is: ${code}`,
+  );
+}
+
 export const authRouter = Router();
 
 authRouter.post(
@@ -58,6 +84,7 @@ authRouter.post(
   authLimiter,
   h(async (req, res) => {
     const body = parse(registerSchema, req.body);
+    body.name = filterText(body.name, 'name');
     const existing = await pool.query(
       'SELECT (username = $1::citext) AS u, (email = $2::citext) AS e FROM users WHERE username = $1::citext OR email = $2::citext',
       [body.username, body.email],
@@ -71,6 +98,7 @@ authRouter.post(
       [body.name, body.username, body.email, passwordHash, body.university ?? null, body.role ?? 'student'],
     );
     const id = rows[0].id as string;
+    await sendVerificationCode(id);
     const tokens = await issueTokens(id, req.get('user-agent'));
     res.status(201).json({ user: await loadMe(pool, id), ...tokens });
   }),
@@ -83,12 +111,13 @@ authRouter.post(
     const { identifier, password } = parse(loginSchema, req.body);
     const ident = identifier.replace(/^@/, '');
     const { rows } = await pool.query(
-      'SELECT id, password_hash FROM users WHERE email = $1::citext OR username = $1::citext LIMIT 1',
+      'SELECT id, password_hash, suspended_at, suspended_reason FROM users WHERE email = $1::citext OR username = $1::citext LIMIT 1',
       [ident],
     );
     const row = rows[0];
     const ok = await bcrypt.compare(password, row?.password_hash ?? DUMMY_HASH);
     if (!row || !ok) throw unauthorized('Invalid credentials');
+    if (row.suspended_at) throw suspended(row.suspended_reason);
     const tokens = await issueTokens(row.id, req.get('user-agent'));
     res.json({ user: await loadMe(pool, row.id), ...tokens });
   }),
@@ -99,6 +128,11 @@ authRouter.post(
   authLimiter,
   h(async (req, res) => {
     const { refreshToken } = parse(refreshSchema, req.body);
+    const s = await pool.query(
+      'SELECT u.suspended_at, u.suspended_reason FROM refresh_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = $1',
+      [sha256(refreshToken)],
+    );
+    if (s.rows[0]?.suspended_at) throw suspended(s.rows[0].suspended_reason);
     res.json(await rotateRefreshToken(refreshToken, req.get('user-agent')));
   }),
 );
@@ -195,6 +229,55 @@ authRouter.post(
       throw badRequest('Current password is incorrect', [{ path: 'currentPassword', message: 'Incorrect password' }]);
     }
     await pool.query('UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1', [id, await hashPassword(body.newPassword)]);
+    res.status(204).end();
+  }),
+);
+
+authRouter.post(
+  '/verify-email',
+  authLimiter,
+  requireAuth,
+  h(async (req, res) => {
+    const { code } = parse(z.object({ code: z.string().trim().regex(/^\d{6}$/, 'Code must be 6 digits') }), req.body ?? {});
+    const { id } = me(req);
+    const already = await pool.query('SELECT email_verified_at FROM users WHERE id = $1', [id]);
+    if (already.rows[0].email_verified_at) {
+      res.json(await loadMe(pool, id));
+      return;
+    }
+    const ok = await tx(async (c) => {
+      const row = (
+        await c.query(
+          `SELECT id, code_hash, attempts FROM email_verifications
+            WHERE user_id = $1 AND used_at IS NULL AND expires_at > now() ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
+          [id],
+        )
+      ).rows[0];
+      if (!row || row.attempts >= RESET_MAX_ATTEMPTS) return false;
+      const a = Buffer.from(row.code_hash);
+      const b = Buffer.from(verifyHash(id, code));
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        await c.query('UPDATE email_verifications SET attempts = attempts + 1 WHERE id = $1', [row.id]);
+        return false;
+      }
+      await c.query('UPDATE email_verifications SET used_at = now() WHERE id = $1', [row.id]);
+      await c.query('UPDATE users SET email_verified_at = now() WHERE id = $1', [id]);
+      return true;
+    });
+    if (!ok) throw badRequest('Invalid or expired code', [{ path: 'code', message: 'Invalid or expired code' }]);
+    res.json(await loadMe(pool, id));
+  }),
+);
+
+authRouter.post(
+  '/resend-verification',
+  authLimiter,
+  requireAuth,
+  h(async (req, res) => {
+    const { id } = me(req);
+    const r = await pool.query('SELECT email_verified_at FROM users WHERE id = $1', [id]);
+    if (r.rows[0].email_verified_at) throw conflict('E-mail already verified');
+    await sendVerificationCode(id);
     res.status(204).end();
   }),
 );

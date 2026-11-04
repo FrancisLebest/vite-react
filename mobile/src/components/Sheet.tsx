@@ -3,14 +3,7 @@ import {Alert, Modal, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {api, errorMessage} from '../api';
 import type {ReportReason, ReportTarget} from '../api/types';
-import {
-  MAX_CONTENT_WIDTH,
-  colors,
-  font,
-  radius,
-  spacing,
-  weight,
-} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight, MAX_CONTENT_WIDTH} from '../theme';
 import {Icon} from './ui';
 
 export interface SheetOption {
@@ -32,6 +25,8 @@ const Ctx = createContext<(c: SheetConfig) => void>(() => undefined);
 export const useSheet = () => useContext(Ctx);
 
 export function SheetProvider({children}: {children: React.ReactNode}) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const [config, setConfig] = useState<SheetConfig | null>(null);
   const close = () => setConfig(null);
@@ -146,10 +141,10 @@ export function confirmDestructive(
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {flex: 1, backgroundColor: colors.overlay},
+const useStyles = makeStyles(c => ({
+  backdrop: {flex: 1, backgroundColor: c.overlay},
   sheet: {
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     width: '100%',
@@ -161,20 +156,20 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.border,
+    backgroundColor: c.border,
     alignSelf: 'center',
     marginVertical: spacing.sm,
   },
   title: {
     fontSize: font.lg,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     textAlign: 'center',
     marginTop: spacing.xs,
   },
   message: {
     fontSize: font.sm,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
@@ -184,22 +179,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: c.border,
   },
-  optionText: {fontSize: font.lg, color: colors.text, marginLeft: spacing.md},
-  destructive: {color: colors.danger},
+  optionText: {fontSize: font.lg, color: c.text, marginLeft: spacing.md},
+  destructive: {color: c.danger},
   pressed: {opacity: 0.6},
   cancel: {
     marginTop: spacing.md,
     height: 48,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelText: {
     fontSize: font.lg,
     fontWeight: weight.semibold,
-    color: colors.text,
+    color: c.text,
   },
-});
+}));

@@ -45,7 +45,7 @@ import {
 } from '../query/hooks';
 import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {useDebounced} from '../utils/hooks';
 import {useResponsive} from '../utils/responsive';
 
@@ -78,6 +78,8 @@ export default function SearchScreen({
   route,
   navigation,
 }: RootScreenProps<'Search'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const [query, setQuery] = useState(route.params?.query ?? '');
   const [type, setType] = useState<SearchType>(route.params?.type ?? 'all');
   const [filters, setFilters] = useState<Filters>({
@@ -351,6 +353,8 @@ function FilterSheet({
   filters: Filters;
   onApply: (type: SearchType, filters: Filters) => void;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {contentWidth} = useResponsive();
   const {categories} = useCategories();
@@ -534,7 +538,7 @@ function FilterSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   search: {flex: 1, marginLeft: spacing.xs},
   summary: {
     flexDirection: 'row',
@@ -547,15 +551,15 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: font.lg,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
   },
-  summaryCount: {fontSize: font.sm, color: colors.textSecondary},
+  summaryCount: {fontSize: font.sm, color: c.textSecondary},
   chips: {paddingBottom: spacing.sm},
   list: {paddingTop: spacing.xs, paddingBottom: spacing.xxl, flexGrow: 1},
   groupTitle: {
     fontSize: font.md,
     fontWeight: weight.bold,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.md,
     marginBottom: spacing.sm,
@@ -564,12 +568,12 @@ const styles = StyleSheet.create({
   suggestTitle: {
     fontSize: font.lg,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginBottom: spacing.md,
   },
-  backdrop: {flex: 1, backgroundColor: colors.overlay},
+  backdrop: {flex: 1, backgroundColor: c.overlay},
   sheet: {
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     maxHeight: '88%',
@@ -581,7 +585,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.border,
+    backgroundColor: c.border,
     alignSelf: 'center',
     marginTop: spacing.sm,
   },
@@ -595,13 +599,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: font.xl,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginLeft: spacing.sm,
   },
   label: {
     fontSize: font.lg,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
@@ -612,30 +616,30 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.primaryTint,
+    borderColor: c.border,
+    backgroundColor: c.primaryTint,
   },
-  catTileActive: {backgroundColor: colors.primary, borderColor: colors.primary},
-  catLabel: {fontSize: font.xs, color: colors.text, marginTop: 6},
-  catLabelActive: {color: colors.white, fontWeight: weight.semibold},
+  catTileActive: {backgroundColor: c.primary, borderColor: c.primary},
+  catLabel: {fontSize: font.xs, color: c.text, marginTop: 6},
+  catLabelActive: {color: c.white, fontWeight: weight.semibold},
   select: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 48,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing.md,
   },
   selectText: {
     flex: 1,
     marginLeft: spacing.sm,
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
   },
   options: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radius.md,
     marginTop: spacing.xs,
   },
@@ -647,11 +651,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
-  optionText: {fontSize: font.md, color: colors.text},
-  optionActive: {color: colors.primary, fontWeight: weight.semibold},
+  optionText: {fontSize: font.md, color: c.text},
+  optionActive: {color: c.primary, fontWeight: weight.semibold},
   segment: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.pill,
     padding: 4,
   },
@@ -661,14 +665,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
   },
-  segmentActive: {backgroundColor: colors.primary},
+  segmentActive: {backgroundColor: c.primary},
   segmentText: {
     fontSize: font.sm,
-    color: colors.text,
+    color: c.text,
     fontWeight: weight.medium,
   },
-  segmentTextActive: {color: colors.white, fontWeight: weight.semibold},
+  segmentTextActive: {color: c.white, fontWeight: weight.semibold},
   apply: {marginTop: spacing.xxl},
   reset: {alignItems: 'center', paddingVertical: spacing.md},
-  resetText: {color: colors.textSecondary, fontSize: font.md},
-});
+  resetText: {color: c.textSecondary, fontSize: font.md},
+}));

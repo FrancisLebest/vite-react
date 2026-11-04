@@ -1,5 +1,14 @@
-# Production-like stack: PostgreSQL + API (+ uploads volume).
+# Production-like stack: PostgreSQL + Redis + API + video worker (+ uploads volume shared by API and worker).
 # Usage: cp .env.example .env  (set JWT_SECRET, PUBLIC_URL, POSTGRES_PASSWORD)  &&  docker compose up -d --build
+x-api-env: &api-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://studyhub:${POSTGRES_PASSWORD:-studyhub}@db:5432/studyhub
+  DATABASE_SSL: "false"
+  REDIS_URL: redis://redis:6379
+  UPLOAD_DIR: /app/uploads
+  PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4000}
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+
 services:
   db:
     image: postgres:16-alpine
@@ -16,29 +25,59 @@ services:
       timeout: 5s
       retries: 20
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   api:
     build: .
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - path: .env
         required: false
     environment:
-      NODE_ENV: production
+      <<: *api-env
       PORT: 4000
-      DATABASE_URL: postgres://studyhub:${POSTGRES_PASSWORD:-studyhub}@db:5432/studyhub
-      DATABASE_SSL: "false"
-      UPLOAD_DIR: /app/uploads
-      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4000}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       TRUST_PROXY: ${TRUST_PROXY:-1}
     ports:
       - "${API_PORT:-4000}:4000"
     volumes:
       - uploads:/app/uploads
 
+  # Transcodes uploaded videos (BullMQ consumer). Scale with: docker compose up -d --scale worker=2
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["node", "dist/worker.js"]
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *api-env
+    healthcheck:
+      disable: true
+    volumes:
+      - uploads:/app/uploads
+
 volumes:
   pgdata:
+  redisdata:
   uploads:

@@ -13,11 +13,12 @@ import {confirmDestructive} from '../components/Sheet';
 import {Avatar, BackHeader, Icon, Screen} from '../components/ui';
 import {API_ORIGIN} from '../config';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 
 export default function SettingsScreen({
   navigation,
 }: RootScreenProps<'Settings'>) {
+  const styles = useStyles();
   const {me, logout, deleteAccount} = useAuth();
   const [busy, setBusy] = useState(false);
 
@@ -122,6 +123,8 @@ function Row({
   destructive?: boolean;
   disabled?: boolean;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -146,22 +149,22 @@ function Row({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   scroll: {padding: spacing.lg},
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
   },
   cardBody: {marginLeft: spacing.md, flex: 1},
-  name: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
-  sub: {fontSize: font.sm, color: colors.textSecondary},
+  name: {fontSize: font.lg, fontWeight: weight.bold, color: c.text},
+  sub: {fontSize: font.sm, color: c.textSecondary},
   section: {
     fontSize: font.sm,
     fontWeight: weight.semibold,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
     textTransform: 'uppercase',
@@ -171,20 +174,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: c.border,
   },
   pressed: {opacity: 0.6},
   rowText: {
     flex: 1,
     marginLeft: spacing.md,
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
   },
-  danger: {color: colors.danger},
+  danger: {color: c.danger},
   footer: {
     fontSize: font.xs,
-    color: colors.textMuted,
+    color: c.textMuted,
     textAlign: 'center',
     marginTop: spacing.xxl,
   },
-});
+}));

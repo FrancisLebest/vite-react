@@ -12,7 +12,7 @@ import {
   useToggleFollow,
   useToggleLike,
 } from '../query/hooks';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {formatCount} from '../utils/responsive';
 import {usePostOptions} from './items';
 import {Avatar, Icon, VerifiedBadge} from './ui';
@@ -47,6 +47,8 @@ export const VideoFeedItem = React.memo(function VideoFeedItem({
   onToggleMute,
   topInset,
 }: VideoFeedItemProps) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const navigation = useNavigation();
   const {me} = useAuth();
   const like = useToggleLike();
@@ -321,7 +323,7 @@ function RailAction({
   icon,
   label,
   onPress,
-  color = colors.white,
+  color: colorProp,
   a11y,
 }: {
   icon: string;
@@ -330,6 +332,9 @@ function RailAction({
   color?: string;
   a11y: string;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
+  const color = colorProp ?? colors.white;
   return (
     <Pressable
       onPress={onPress}
@@ -349,15 +354,15 @@ const textShadow = {
   textShadowRadius: 3,
 };
 
-const styles = StyleSheet.create({
-  page: {backgroundColor: colors.black, justifyContent: 'flex-end'},
+const useStyles = makeStyles(c => ({
+  page: {backgroundColor: c.black, justifyContent: 'flex-end'},
   noMedia: {
-    backgroundColor: colors.primaryDark,
+    backgroundColor: c.primaryDark,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xxl,
   },
-  noMediaText: {color: colors.white, fontSize: font.xl, textAlign: 'center'},
+  noMediaText: {color: c.white, fontSize: font.xl, textAlign: 'center'},
   bottomShade: {
     position: 'absolute',
     left: 0,
@@ -376,7 +381,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   tagText: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.sm,
     fontWeight: weight.semibold,
     marginLeft: 6,
@@ -395,15 +400,15 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.danger,
+    backgroundColor: c.danger,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plusFollowing: {backgroundColor: colors.success},
+  plusFollowing: {backgroundColor: c.success},
   railAction: {alignItems: 'center', marginTop: spacing.lg},
   railIcon: textShadow,
   railLabel: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.xs,
     fontWeight: weight.semibold,
     marginTop: 2,
@@ -421,7 +426,7 @@ const styles = StyleSheet.create({
   },
   authorTap: {flexDirection: 'row', alignItems: 'center', flexShrink: 1},
   authorName: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.lg,
     fontWeight: weight.bold,
     marginRight: spacing.xs,
@@ -430,21 +435,21 @@ const styles = StyleSheet.create({
   },
   followOutline: {
     borderWidth: 1.5,
-    borderColor: colors.white,
+    borderColor: c.white,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     marginLeft: spacing.sm,
   },
   followOutlineText: {
-    color: colors.white,
+    color: c.white,
     fontWeight: weight.semibold,
     fontSize: font.sm,
   },
-  captionText: {color: colors.white, fontSize: font.md, ...textShadow},
+  captionText: {color: c.white, fontSize: font.md, ...textShadow},
   tags: {flexDirection: 'row', flexWrap: 'wrap', marginTop: 2},
   hashtag: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.md,
     fontWeight: weight.semibold,
     marginRight: spacing.xs,
@@ -452,9 +457,9 @@ const styles = StyleSheet.create({
   },
   soundRow: {flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm},
   soundText: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.sm,
     marginLeft: 6,
     ...textShadow,
   },
-});
+}));

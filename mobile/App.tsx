@@ -7,7 +7,7 @@ import {AuthProvider} from './src/auth/AuthContext';
 import {SheetProvider} from './src/components/Sheet';
 import RootNavigator from './src/navigation/RootNavigator';
 import {createQueryClient, setupFocusManager} from './src/query/queryClient';
-import {colors} from './src/theme';
+import {useTheme} from './src/theme';
 
 const navTheme = {
   ...DefaultTheme,
@@ -23,6 +23,7 @@ const navTheme = {
 };
 
 export default function App({queryClient}: {queryClient?: QueryClient}) {
+  const {colors} = useTheme();
   const [qc] = useState(() => queryClient ?? createQueryClient());
   useEffect(() => setupFocusManager(), []);
   return (

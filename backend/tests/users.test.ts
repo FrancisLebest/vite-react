@@ -16,7 +16,7 @@ describe('users & follows', () => {
   it('follows with notification, counts, lists and mutuals', async () => {
     expectError(await api().post(`/api/v1/users/${alice.user.id}/follow`).set(alice.auth), 400, 'VALIDATION_ERROR');
     const f = await api().post(`/api/v1/users/${alice.user.id}/follow`).set(bob.auth);
-    expect(f.body).toEqual({ isFollowing: true, followerCount: 1 });
+    expect(f.body).toMatchObject({ isFollowing: true, followerCount: 1 });
     // idempotent
     expect((await api().post(`/api/v1/users/${alice.user.id}/follow`).set(bob.auth)).body.followerCount).toBe(1);
 
@@ -41,7 +41,7 @@ describe('users & follows', () => {
     expect(following.body.items.map((u: any) => u.id)).toEqual([bob.user.id]);
 
     const un = await api().delete(`/api/v1/users/${alice.user.id}/follow`).set(bob.auth);
-    expect(un.body).toEqual({ isFollowing: false, followerCount: 0 });
+    expect(un.body).toMatchObject({ isFollowing: false, followerCount: 0 });
     expect((await api().get('/api/v1/notifications/unread-count').set(alice.auth)).body).toEqual({ count: 0 });
   });
 

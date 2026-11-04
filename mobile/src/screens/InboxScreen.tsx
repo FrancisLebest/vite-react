@@ -36,7 +36,7 @@ import {
   useUnreadCounts,
 } from '../query/messaging';
 import type {TabScreenProps} from '../navigation/types';
-import {colors, font, spacing, weight} from '../theme';
+import {font, makeStyles, spacing, useTheme, weight} from '../theme';
 import {inboxTime, toMs} from '../utils/time';
 
 type Filter = 'all' | 'messages' | 'notifications' | 'mentions';
@@ -46,6 +46,8 @@ type Row =
   | {type: 'notification'; id: string; item: AppNotification; ts: number};
 
 export default function InboxScreen({navigation}: TabScreenProps<'Inbox'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const [filter, setFilter] = useState<Filter>('all');
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
@@ -230,6 +232,8 @@ export default function InboxScreen({navigation}: TabScreenProps<'Inbox'>) {
 }
 
 function ConversationRow({conversation: c}: {conversation: Conversation}) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {me} = useAuth();
   const {navigate} = useNavigation();
   const openSheet = useSheet();
@@ -316,7 +320,7 @@ function ConversationRow({conversation: c}: {conversation: Conversation}) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   ml: {marginLeft: spacing.md},
   grow: {flexGrow: 1},
   pressed: {opacity: 0.7},
@@ -328,20 +332,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  rowUnread: {backgroundColor: colors.primaryTint},
+  rowUnread: {backgroundColor: c.primaryTint},
   body: {flex: 1, marginHorizontal: spacing.md},
   titleRow: {flexDirection: 'row', alignItems: 'center'},
   title: {
     fontSize: font.md,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginRight: 4,
     flexShrink: 1,
   },
-  preview: {fontSize: font.sm, color: colors.textSecondary, marginTop: 3},
-  previewUnread: {color: colors.text, fontWeight: weight.medium},
+  preview: {fontSize: font.sm, color: c.textSecondary, marginTop: 3},
+  previewUnread: {color: c.text, fontWeight: weight.medium},
   trailing: {alignItems: 'flex-end'},
-  time: {fontSize: font.xs, color: colors.textMuted},
+  time: {fontSize: font.xs, color: c.textMuted},
   status: {height: 20, marginTop: 6, justifyContent: 'center'},
-  unreadBadge: {backgroundColor: colors.primary},
-});
+  unreadBadge: {backgroundColor: c.primary},
+}));

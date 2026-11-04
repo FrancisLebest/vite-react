@@ -194,7 +194,7 @@ describe('feed', () => {
     // following
     expect((await api().get('/api/v1/feed?tab=following').set(dave.auth)).body.items).toEqual([]);
     const f = await api().post(`/api/v1/users/${eve.user.id}/follow`).set(dave.auth);
-    expect(f.body).toEqual({ isFollowing: true, followerCount: 1 });
+    expect(f.body).toMatchObject({ isFollowing: true, followerCount: 1 });
     const following = await api().get('/api/v1/feed?tab=following').set(dave.auth);
     expect(following.body.items.map((p: any) => p.id)).toEqual([hot.id]);
     expect(following.body.items[0].author.isFollowing).toBe(true);

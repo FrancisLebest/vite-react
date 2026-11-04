@@ -12,7 +12,7 @@ import {useSheet} from '../components/Sheet';
 import {ErrorState, Icon, LoadingState, Logo} from '../components/ui';
 import {useUnreadCounts} from '../query/messaging';
 import {SocketProvider} from '../realtime/SocketProvider';
-import {colors, font, spacing, weight} from '../theme';
+import {font, makeStyles, spacing, useTheme, weight} from '../theme';
 import type {RootStackParamList, TabParamList} from './types';
 
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
@@ -73,6 +73,8 @@ function renderTabIcon(name: keyof TabParamList): IconRenderer {
 
 /** "+" tab: opens a chooser (Video / Post) instead of a screen. */
 function CreateTabButton(props: BottomTabBarButtonProps) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const openSheet = useSheet();
   const navigation = useNavigation();
   return (
@@ -110,6 +112,8 @@ function CreateTabButton(props: BottomTabBarButtonProps) {
 }
 
 function Tabs() {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const unread = useUnreadCounts();
   const insets = useSafeAreaInsets();
   const inboxBadge = unread.conversations + unread.notifications;
@@ -173,6 +177,7 @@ function SplashScreen({
   error?: string | null;
   onRetry: () => void;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.splash}>
       <Logo size={64} />
@@ -194,6 +199,7 @@ function SplashScreen({
 }
 
 export default function RootNavigator() {
+  const {colors} = useTheme();
   const {status, me, bootError, retryBoot} = useAuth();
 
   if (status === 'booting') {
@@ -263,25 +269,25 @@ export default function RootNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   tabBar: {
-    borderTopColor: colors.border,
-    backgroundColor: colors.white,
+    borderTopColor: c.border,
+    backgroundColor: c.white,
     paddingTop: 6,
   },
   tabLabel: {fontSize: font.xs, fontWeight: '500'},
-  tabBadge: {backgroundColor: colors.danger, fontSize: 10},
+  tabBadge: {backgroundColor: c.danger, fontSize: 10},
   createButton: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
     ...Platform.select({
       ios: {
-        shadowColor: colors.primary,
+        shadowColor: c.primary,
         shadowOpacity: 0.35,
         shadowRadius: 8,
         shadowOffset: {width: 0, height: 4},
@@ -293,14 +299,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: c.background,
     padding: spacing.xl,
   },
   brand: {
     fontSize: font.title,
     fontWeight: weight.bold,
-    color: colors.primary,
+    color: c.primary,
     marginTop: spacing.sm,
   },
   splashLoader: {flexGrow: 0, marginTop: spacing.xl},
-});
+}));

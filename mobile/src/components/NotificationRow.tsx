@@ -3,7 +3,7 @@ import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {AppNotification, NotificationType} from '../api/types';
 import {mediaUrl} from '../config';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {timeAgo} from '../utils/time';
 import {Avatar, Icon} from './ui';
 
@@ -24,6 +24,8 @@ export function NotificationRow({
   /** override the unread highlight (Notifications screen keeps a snapshot) */
   highlight?: boolean;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const navigation = useNavigation();
   const unread = highlight ?? !n.read;
   const thumb = mediaUrl(n.post?.thumbnailUrl);
@@ -78,14 +80,14 @@ export function NotificationRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  unread: {backgroundColor: colors.primaryTint},
+  unread: {backgroundColor: c.primaryTint},
   pressed: {opacity: 0.7},
   icon: {
     position: 'absolute',
@@ -94,20 +96,20 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     borderWidth: 2,
-    borderColor: colors.white,
+    borderColor: c.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
   body: {flex: 1, marginHorizontal: spacing.md},
-  text: {fontSize: font.md, color: colors.textSecondary},
-  name: {fontWeight: weight.bold, color: colors.text},
-  time: {fontSize: font.xs, color: colors.textMuted, marginTop: 2},
+  text: {fontSize: font.md, color: c.textSecondary},
+  name: {fontWeight: weight.bold, color: c.text},
+  time: {fontSize: font.xs, color: c.textMuted, marginTop: 2},
   thumb: {
     width: 44,
     height: 58,
     borderRadius: radius.sm,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: c.primarySoft,
   },
-});
+}));

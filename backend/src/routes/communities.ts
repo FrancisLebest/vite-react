@@ -9,7 +9,8 @@ import { h, me } from '../middleware/auth.js';
 import { singleUpload } from '../middleware/upload.js';
 import { MB, storeAvatar } from '../media/process.js';
 import { deleteKeys } from '../storage/index.js';
-import { loadCommunities, loadPosts, loadUserSummaries, notBlockedSql } from '../services/hydrate.js';
+import { loadCommunities, loadPosts, loadUserSummaries, notBlockedSql, postVisibleSql } from '../services/hydrate.js';
+import { filterOptional, filterText } from '../lib/contentFilter.js';
 import { notify } from '../services/notifications.js';
 
 export const communitiesRouter = Router();
@@ -99,6 +100,8 @@ communitiesRouter.post(
   singleUpload('avatar', 5 * MB),
   h(async (req, res) => {
     const body = parse(createSchema, req.body ?? {});
+    body.name = filterText(body.name, 'name');
+    body.description = filterOptional(body.description, 'description');
     const viewer = me(req).id;
     await assertNameFree(body.name);
     const avatarKey = req.file ? await storeAvatar(req.file) : null;
@@ -142,6 +145,8 @@ communitiesRouter.patch(
     const community = await getCommunity(id);
     if (community.owner_id !== viewer) throw forbidden('Only the owner can edit this community');
     const body = parse(updateSchema, req.body ?? {});
+    body.name = filterOptional(body.name, 'name');
+    body.description = filterOptional(body.description, 'description');
     if (body.name) await assertNameFree(body.name, id);
     const q = new Q();
     const sets: string[] = [];
@@ -226,7 +231,7 @@ communitiesRouter.get(
     await getCommunity(id);
     const q = new Q();
     const v = q.p(viewer);
-    q.and(`p.community_id = ${q.p(id)}`).and(notBlockedSql('p.author_id', v));
+    q.and(`p.community_id = ${q.p(id)}`).and(`p.status = 'ready'`).and(postVisibleSql('p', v));
     keysetCond(q, 'p.created_at', 'p.id', decodeKeyCursor(query.cursor));
     const { rows } = await pool.query(
       `SELECT p.id, p.created_at::text AS _ct FROM posts p ${q.whereSql()} ORDER BY p.created_at DESC, p.id DESC LIMIT ${query.limit + 1}`,

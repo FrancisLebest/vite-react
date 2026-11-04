@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useUniversities} from '../query/hooks';
-import {colors, font, radius, spacing} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme} from '../theme';
 import {useDebounced} from '../utils/hooks';
 import {Icon, TextField} from './ui';
 
@@ -15,6 +15,8 @@ export function UniversityField({
   onChange: (v: string) => void;
   label?: string;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const [focused, setFocused] = useState(false);
   const q = useDebounced(value, 300);
   const {data} = useUniversities(q);
@@ -56,13 +58,13 @@ export function UniversityField({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   list: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radius.md,
     marginTop: spacing.xs,
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
   },
   item: {
     flexDirection: 'row',
@@ -70,11 +72,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
-  pressed: {backgroundColor: colors.primaryTint},
+  pressed: {backgroundColor: c.primaryTint},
   text: {
     marginLeft: spacing.sm,
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
     flex: 1,
   },
-});
+}));

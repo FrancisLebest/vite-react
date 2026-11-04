@@ -16,7 +16,7 @@ import {
 } from '../components/ui';
 import {useUsers} from '../query/hooks';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, spacing} from '../theme';
+import {makeStyles, spacing, useTheme} from '../theme';
 import {useDebounced} from '../utils/hooks';
 
 type Segment = 'all' | 'students' | 'professors' | 'creators';
@@ -29,6 +29,8 @@ const SEGMENTS: Record<Segment, UsersParams> = {
 };
 
 export default function UsersScreen({navigation}: RootScreenProps<'Users'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const [segment, setSegment] = useState<Segment>('all');
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
@@ -122,9 +124,9 @@ export default function UsersScreen({navigation}: RootScreenProps<'Users'>) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   ml: {marginLeft: spacing.md},
   grow: {flexGrow: 1},
   search: {marginHorizontal: spacing.lg, marginBottom: spacing.sm},
   chips: {paddingBottom: spacing.sm},
-});
+}));

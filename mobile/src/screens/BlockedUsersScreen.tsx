@@ -15,11 +15,13 @@ import {
 import {useManualRefresh} from '../query/hooks';
 import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
-import {colors} from '../theme';
+import {makeStyles, useTheme} from '../theme';
 
 export default function BlockedUsersScreen(
   _p: RootScreenProps<'BlockedUsers'>,
 ) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const qc = useQueryClient();
   const blocked = useQuery({
     queryKey: qk.blocked(),
@@ -91,4 +93,4 @@ export default function BlockedUsersScreen(
   );
 }
 
-const styles = StyleSheet.create({grow: {flexGrow: 1}});
+const useStyles = makeStyles(c => ({grow: {flexGrow: 1}}));

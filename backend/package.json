@@ -17,7 +17,11 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:deploy": "node dist/db/migrate.js",
     "seed:admin": "tsx src/scripts/seed-admin.ts",
-    "seed:admin:prod": "node dist/scripts/seed-admin.js"
+    "seed:admin:prod": "node dist/scripts/seed-admin.js",
+    "worker": "tsx src/worker.ts",
+    "worker:prod": "node dist/worker.js",
+    "make-admin": "tsx src/scripts/make-admin.ts",
+    "make-admin:prod": "node dist/scripts/make-admin.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",

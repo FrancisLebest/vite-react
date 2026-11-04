@@ -38,7 +38,7 @@ import {qk} from './keys';
 export function useCursorList<T extends {id: string}>(
   key: QueryKey,
   fetchPage: (cursor?: string) => Promise<Page<T>>,
-  opts: {enabled?: boolean; staleTime?: number} = {},
+  opts: {enabled?: boolean; staleTime?: number; cacheTime?: number} = {},
 ) {
   const q = useInfiniteQuery({
     queryKey: key,
@@ -46,6 +46,7 @@ export function useCursorList<T extends {id: string}>(
     getNextPageParam: last => last.nextCursor ?? undefined,
     enabled: opts.enabled,
     staleTime: opts.staleTime,
+    cacheTime: opts.cacheTime,
   });
   const items = useMemo(() => {
     const seen = new Set<string>();
@@ -135,8 +136,10 @@ export function useUniversities(q: string) {
 /* ------------------------------------------------------------------ */
 
 export function useFeed(p: FeedParams, enabled = true) {
+  // Long cacheTime: feeds are persisted for offline start (see offline/persist.ts).
   return useCursorList<Post>(qk.feed(p), cursor => api.posts.feed(p, cursor), {
     enabled,
+    cacheTime: 24 * 60 * 60 * 1000,
   });
 }
 

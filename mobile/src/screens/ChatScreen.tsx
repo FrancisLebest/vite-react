@@ -44,7 +44,7 @@ import {
 } from '../query/messaging';
 import {useSocket} from '../realtime/SocketProvider';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {clock, toMs} from '../utils/time';
 
 const TYPING_THROTTLE_MS = 2000;
@@ -54,6 +54,8 @@ export default function ChatScreen({
   route,
   navigation,
 }: RootScreenProps<'Chat'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {conversationId} = route.params;
   const {me} = useAuth();
   const insets = useSafeAreaInsets();
@@ -417,7 +419,7 @@ export default function ChatScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   flex: {flex: 1},
   row: {flexDirection: 'row', alignItems: 'center'},
   headerTitle: {
@@ -430,11 +432,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: font.lg,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginRight: 4,
     flexShrink: 1,
   },
-  status: {fontSize: font.xs, color: colors.textSecondary},
+  status: {fontSize: font.xs, color: c.textSecondary},
   list: {padding: spacing.lg, flexGrow: 1},
   invert: {transform: [{scaleY: -1}]},
   bubbleWrap: {marginBottom: spacing.md, maxWidth: '80%'},
@@ -442,7 +444,7 @@ const styles = StyleSheet.create({
   right: {alignSelf: 'flex-end', alignItems: 'flex-end'},
   sender: {
     fontSize: font.xs,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginBottom: 2,
     marginLeft: 4,
   },
@@ -451,19 +453,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.lg,
   },
-  mine: {backgroundColor: colors.primary, borderBottomRightRadius: 4},
-  theirs: {backgroundColor: colors.surface, borderBottomLeftRadius: 4},
+  mine: {backgroundColor: c.primary, borderBottomRightRadius: 4},
+  theirs: {backgroundColor: c.surface, borderBottomLeftRadius: 4},
   pending: {opacity: 0.6},
   image: {
     width: 220,
     height: 220,
     borderRadius: radius.lg,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: c.primarySoft,
     marginBottom: 4,
   },
-  msg: {fontSize: font.md, color: colors.text},
-  msgMine: {color: colors.white},
-  time: {fontSize: 10, color: colors.textMuted, marginTop: 2},
+  msg: {fontSize: font.md, color: c.text},
+  msgMine: {color: c.white},
+  time: {fontSize: 10, color: c.textMuted, marginTop: 2},
   upload: {paddingHorizontal: spacing.lg, paddingBottom: spacing.xs},
   composer: {
     flexDirection: 'row',
@@ -471,8 +473,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    backgroundColor: colors.white,
+    borderTopColor: c.border,
+    backgroundColor: c.white,
   },
   attach: {marginBottom: 8, marginRight: spacing.xs},
   input: {
@@ -480,22 +482,22 @@ const styles = StyleSheet.create({
     minHeight: 42,
     maxHeight: 120,
     borderRadius: 21,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     paddingHorizontal: spacing.lg,
     paddingTop: Platform.OS === 'ios' ? 12 : 8,
     paddingBottom: Platform.OS === 'ios' ? 12 : 8,
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
     textAlignVertical: 'center',
   },
   send: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,
   },
   sendDisabled: {opacity: 0.4},
-});
+}));

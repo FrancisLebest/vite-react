@@ -30,7 +30,7 @@ import {isPost, patchEntities, removeFromPages} from '../query/cache';
 import {useComments, usePost} from '../query/hooks';
 import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {formatCount} from '../utils/responsive';
 import {timeAgo} from '../utils/time';
 
@@ -40,6 +40,8 @@ export default function CommentsScreen({
   route,
   navigation,
 }: RootScreenProps<'Comments'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {postId} = route.params;
   const {me} = useAuth();
   const qc = useQueryClient();
@@ -255,37 +257,37 @@ export default function CommentsScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   flex: {flex: 1},
   header: {
     alignItems: 'center',
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: c.border,
   },
   handle: {
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.border,
+    backgroundColor: c.border,
     marginBottom: spacing.sm,
   },
-  title: {fontSize: font.lg, fontWeight: weight.bold, color: colors.text},
+  title: {fontSize: font.lg, fontWeight: weight.bold, color: c.text},
   close: {position: 'absolute', right: spacing.md, top: spacing.md},
   list: {padding: spacing.lg, flexGrow: 1},
   comment: {flexDirection: 'row', marginBottom: spacing.lg},
   body: {flex: 1, marginLeft: spacing.md},
-  name: {fontSize: font.sm, fontWeight: weight.bold, color: colors.text},
-  time: {fontWeight: weight.regular, color: colors.textMuted},
-  text: {fontSize: font.md, color: colors.text, marginTop: 2},
+  name: {fontSize: font.sm, fontWeight: weight.bold, color: c.text},
+  time: {fontWeight: weight.regular, color: c.textMuted},
+  text: {fontSize: font.md, color: c.text, marginTop: 2},
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: c.border,
   },
   input: {
     flex: 1,
@@ -293,18 +295,18 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
     paddingVertical: 0,
   },
   send: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   disabled: {opacity: 0.4},
-});
+}));

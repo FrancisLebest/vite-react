@@ -76,6 +76,7 @@ export class ApiClient {
   private refreshing: Promise<string> | null = null;
   private tokenListeners = new Set<Listener<TokenPair | null>>();
   private expiredListeners = new Set<Listener<void>>();
+  private suspendedListeners = new Set<Listener<string | null>>();
 
   constructor(opts: ApiClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
@@ -125,6 +126,24 @@ export class ApiClient {
     return () => this.tokenListeners.delete(l);
   }
 
+  /** ACCOUNT_SUSPENDED (403) from any request → listeners get `details.reason`. */
+  onSuspended(l: Listener<string | null>): () => void {
+    this.suspendedListeners.add(l);
+    return () => this.suspendedListeners.delete(l);
+  }
+
+  /** Called by the API layer and the socket on ACCOUNT_SUSPENDED. */
+  notifySuspended(reason: string | null) {
+    this.suspendedListeners.forEach(l => l(reason));
+  }
+
+  private checkSuspended(e: unknown) {
+    if (e instanceof ApiError && e.code === 'ACCOUNT_SUSPENDED') {
+      const d = e.details as {reason?: unknown} | undefined;
+      this.notifySuspended(typeof d?.reason === 'string' ? d.reason : null);
+    }
+  }
+
   onSessionExpired(l: Listener<void>): () => void {
     this.expiredListeners.add(l);
     return () => this.expiredListeners.delete(l);
@@ -166,6 +185,10 @@ export class ApiClient {
     const text = await res.text();
     if (!res.ok) {
       const err = errorFromResponse(res.status, text);
+      if (err.code === 'ACCOUNT_SUSPENDED') {
+        this.checkSuspended(err);
+        throw err;
+      }
       if (res.status === 400 || res.status === 401 || res.status === 403) {
         await this.expire();
         throw new ApiError(401, 'UNAUTHORIZED', undefined, err.details);
@@ -256,6 +279,7 @@ export class ApiClient {
       }
       return await this.parse<T>(res);
     } catch (e) {
+      this.checkSuspended(e);
       throw normalizeError(e);
     }
   }
@@ -317,6 +341,7 @@ export class ApiClient {
       }
       return (res.text ? JSON.parse(res.text) : undefined) as T;
     } catch (e) {
+      this.checkSuspended(e);
       throw normalizeError(e);
     }
   }

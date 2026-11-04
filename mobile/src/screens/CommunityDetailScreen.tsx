@@ -28,7 +28,7 @@ import {removeFromPages} from '../query/cache';
 import {useCommunity, useCursorList, useToggleJoin} from '../query/hooks';
 import {qk} from '../query/keys';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing, weight} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme, weight} from '../theme';
 import {formatCount} from '../utils/responsive';
 
 type Tab = 'posts' | 'members';
@@ -37,6 +37,8 @@ export default function CommunityDetailScreen({
   route,
   navigation,
 }: RootScreenProps<'CommunityDetail'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {communityId} = route.params;
   const qc = useQueryClient();
   const openSheet = useSheet();
@@ -266,7 +268,7 @@ export default function CommunityDetailScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   flex: {flex: 1},
   scroll: {paddingBottom: spacing.xxxl},
   hero: {
@@ -279,12 +281,12 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.xxl,
     fontWeight: weight.bold,
     marginTop: spacing.md,
@@ -293,7 +295,7 @@ const styles = StyleSheet.create({
   members: {color: 'rgba(255,255,255,0.85)', fontSize: font.md, marginTop: 4},
   description: {
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
@@ -304,4 +306,4 @@ const styles = StyleSheet.create({
   },
   post: {marginLeft: spacing.md},
   tabs: {marginTop: spacing.lg, paddingBottom: spacing.sm},
-});
+}));

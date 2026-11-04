@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template, NOT referenced by the Xcode project yet (it needs a paid Apple
+  developer team). To enable push + universal links: Xcode → target StudyHub →
+  Signing & Capabilities → add "Push Notifications" and "Associated Domains",
+  or set CODE_SIGN_ENTITLEMENTS = StudyHub/StudyHub.entitlements.
+  Replace studyhub.app with your real domain (it must serve
+  /.well-known/apple-app-site-association).
+-->
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:studyhub.app</string>
+		<string>applinks:www.studyhub.app</string>
+	</array>
+</dict>
+</plist>

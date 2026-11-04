@@ -15,7 +15,7 @@ import {
   useToggleJoin,
   useToggleLike,
 } from '../query/hooks';
-import {colors, font, radius, shadow, spacing, weight} from '../theme';
+import {font, makeStyles, radius, shadowFor, spacing, useTheme, weight} from '../theme';
 import {formatCount} from '../utils/responsive';
 import {duration, timeAgo} from '../utils/time';
 import {confirmDestructive, useReport, useSheet} from './Sheet';
@@ -87,6 +87,8 @@ export function usePostOptions() {
 /* ------------------------------------------------------------------ */
 
 export function ContentRow({item}: {item: Post}) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const navigation = useNavigation();
   const bookmark = useToggleBookmark();
   const saved = item.bookmarkedByMe;
@@ -152,6 +154,8 @@ export function ContentRow({item}: {item: Post}) {
 /* ------------------------------------------------------------------ */
 
 export function GridTile({post, size}: {post: Post; size: number}) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const navigation = useNavigation();
   const thumb = mediaUrl(
     post.media?.thumbnailUrl ??
@@ -195,6 +199,7 @@ export function UserRow({
   right?: React.ReactNode;
   onPress?: () => void;
 }) {
+  const styles = useStyles();
   const navigation = useNavigation();
   const {me} = useAuth();
   const follow = useToggleFollow();
@@ -255,6 +260,8 @@ export function CommunityRow({
   showChevron?: boolean;
   joinable?: boolean;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const navigation = useNavigation();
   const join = useToggleJoin();
   return (
@@ -299,6 +306,7 @@ export function CommunityAvatar({
   community: Community;
   size: number;
 }) {
+  const {colors} = useTheme();
   const uri = mediaUrl(community.avatarUrl);
   if (uri) {
     return (
@@ -329,6 +337,7 @@ export function CommunityCard({
   community: Community;
   width: number;
 }) {
+  const styles = useStyles();
   const navigation = useNavigation();
   const join = useToggleJoin();
   return (
@@ -369,6 +378,8 @@ export function PostCard({
   post: Post;
   onDeleted?: () => void;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const navigation = useNavigation();
   const like = useToggleLike();
   const bookmark = useToggleBookmark();
@@ -499,6 +510,8 @@ export function AudioPlayer({
   uri: string;
   durationSec: number | null;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [total, setTotal] = useState(durationSec ?? 0);
@@ -559,7 +572,7 @@ function Action({
   icon,
   label,
   onPress,
-  color = colors.text,
+  color: colorProp,
   a11y,
 }: {
   icon: string;
@@ -568,6 +581,9 @@ function Action({
   color?: string;
   a11y: string;
 }) {
+  const styles = useStyles();
+  const {colors} = useTheme();
+  const color = colorProp ?? colors.text;
   return (
     <Pressable
       onPress={onPress}
@@ -581,7 +597,7 @@ function Action({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   pressed: {opacity: 0.7},
   flex: {flex: 1},
   radius: {borderRadius: radius.md},
@@ -592,16 +608,16 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     padding: spacing.sm,
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   thumb: {
     width: 112,
     height: 72,
     borderRadius: radius.sm,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: c.primarySoft,
   },
   thumbIcon: {alignItems: 'center', justifyContent: 'center'},
   duration: {
@@ -614,7 +630,7 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   durationText: {
-    color: colors.white,
+    color: c.white,
     fontSize: 10,
     fontWeight: weight.semibold,
   },
@@ -622,23 +638,23 @@ const styles = StyleSheet.create({
   contentTitle: {
     fontSize: font.md,
     fontWeight: weight.semibold,
-    color: colors.text,
+    color: c.text,
   },
   metaRow: {flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm},
   meta: {
     fontSize: font.xs,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginLeft: 6,
     flexShrink: 1,
   },
   tile: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: c.primarySoft,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.white,
+    borderColor: c.white,
     overflow: 'hidden',
   },
   tileText: {padding: spacing.sm, justifyContent: 'center'},
-  tileCaption: {fontSize: font.xs, color: colors.primary},
+  tileCaption: {fontSize: font.xs, color: c.primary},
   tileViews: {
     position: 'absolute',
     left: 4,
@@ -647,7 +663,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tileViewsText: {
-    color: colors.white,
+    color: c.white,
     fontSize: font.xs,
     fontWeight: weight.semibold,
     marginLeft: 2,
@@ -665,49 +681,49 @@ const styles = StyleSheet.create({
   name: {
     fontSize: font.md,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginRight: 4,
     flexShrink: 1,
   },
-  sub: {fontSize: font.sm, color: colors.textSecondary, marginTop: 2},
-  subMuted: {fontSize: font.xs, color: colors.textMuted, marginTop: 2},
+  sub: {fontSize: font.sm, color: c.textSecondary, marginTop: 2},
+  subMuted: {fontSize: font.xs, color: c.textMuted, marginTop: 2},
   chevron: {marginLeft: spacing.sm},
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     padding: spacing.md,
     alignItems: 'center',
     marginRight: spacing.md,
-    ...shadow,
+    ...shadowFor(c),
   },
   cardTitle: {
     fontSize: font.sm,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     textAlign: 'center',
     marginTop: spacing.sm,
     minHeight: font.sm * 2.6,
   },
   cardSub: {
     fontSize: font.xs,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginVertical: spacing.sm,
   },
   owner: {
     fontSize: font.sm,
-    color: colors.primary,
+    color: c.primary,
     fontWeight: weight.semibold,
     height: 32,
     textAlignVertical: 'center',
     lineHeight: 32,
   },
   post: {
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
     paddingVertical: spacing.lg,
     borderBottomWidth: 6,
-    borderBottomColor: colors.surface,
+    borderBottomColor: c.surface,
   },
   postHeader: {
     flexDirection: 'row',
@@ -717,13 +733,13 @@ const styles = StyleSheet.create({
   postAuthor: {flex: 1, flexDirection: 'row', alignItems: 'center'},
   postText: {
     fontSize: font.md,
-    color: colors.text,
+    color: c.text,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.md,
   },
   postTags: {
     fontSize: font.md,
-    color: colors.primaryLight,
+    color: c.primaryLight,
     fontWeight: weight.semibold,
     paddingHorizontal: spacing.lg,
     marginTop: 2,
@@ -733,7 +749,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     aspectRatio: 16 / 9,
     borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: c.primarySoft,
   },
   playOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -750,7 +766,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     borderRadius: radius.pill,
     padding: spacing.sm,
   },
@@ -758,7 +774,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -774,10 +790,10 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: '#CFC6F3',
   },
-  barPlayed: {backgroundColor: colors.primaryLight},
+  barPlayed: {backgroundColor: c.primaryLight},
   audioTime: {
     fontSize: font.xs,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginRight: spacing.xs,
   },
   actions: {
@@ -787,5 +803,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   action: {flexDirection: 'row', alignItems: 'center', marginRight: spacing.xl},
-  actionText: {fontSize: font.sm, color: colors.text, marginLeft: 4},
-});
+  actionText: {fontSize: font.sm, color: c.text, marginLeft: 4},
+}));

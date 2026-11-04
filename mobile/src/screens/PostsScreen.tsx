@@ -25,7 +25,7 @@ import {
 import {useFeed} from '../query/hooks';
 import {useUnreadCounts} from '../query/messaging';
 import type {RootScreenProps} from '../navigation/types';
-import {colors, font, radius, spacing} from '../theme';
+import {font, makeStyles, radius, spacing, useTheme} from '../theme';
 
 type Feed = 'forYou' | 'following' | 'popular' | 'latest';
 
@@ -37,6 +37,8 @@ const PARAMS: Record<Feed, FeedParams> = {
 };
 
 export default function PostsScreen({navigation}: RootScreenProps<'Posts'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const {me} = useAuth();
   const unread = useUnreadCounts();
   const [feed, setFeed] = useState<Feed>('forYou');
@@ -148,7 +150,7 @@ export default function PostsScreen({navigation}: RootScreenProps<'Posts'>) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   ml: {marginLeft: spacing.md},
   grow: {flexGrow: 1},
   composer: {
@@ -159,14 +161,14 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     paddingRight: spacing.lg,
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   composerText: {
     flex: 1,
     marginLeft: spacing.md,
-    color: colors.textMuted,
+    color: c.textMuted,
     fontSize: font.md,
   },
-});
+}));

@@ -4,13 +4,14 @@ import {api, isApiError} from '../api';
 import {PillButton, TextField} from '../components/ui';
 import type {RootScreenProps} from '../navigation/types';
 import {Errors, hasErrors, validators} from '../utils/validation';
-import {AuthLayout, FormError, authStyles} from './auth/AuthLayout';
+import {AuthLayout, FormError, useAuthStyles} from './auth/AuthLayout';
 
 type Field = 'current' | 'next' | 'confirm';
 
 export default function ChangePasswordScreen({
   navigation,
 }: RootScreenProps<'ChangePassword'>) {
+  const authStyles = useAuthStyles();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');

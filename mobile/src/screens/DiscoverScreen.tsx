@@ -34,7 +34,7 @@ import {
   useTrendingTopics,
 } from '../query/hooks';
 import type {TabScreenProps} from '../navigation/types';
-import {colors, font, radius, shadow, spacing, weight} from '../theme';
+import {font, makeStyles, radius, shadowFor, spacing, useTheme, weight} from '../theme';
 import {formatCount, useResponsive} from '../utils/responsive';
 
 type Filter = 'all' | CategoryId;
@@ -48,6 +48,8 @@ const SHORTCUTS = [
 export default function DiscoverScreen({
   navigation,
 }: TabScreenProps<'Discover'>) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<Filter>('all');
   const {contentWidth, gridColumns} = useResponsive();
@@ -219,6 +221,8 @@ export default function DiscoverScreen({
 }
 
 function InlineRetry({onRetry}: {onRetry: () => void}) {
+  const styles = useStyles();
+  const {colors} = useTheme();
   return (
     <Pressable
       onPress={onRetry}
@@ -231,6 +235,7 @@ function InlineRetry({onRetry}: {onRetry: () => void}) {
 }
 
 function SuggestedUserCard({user}: {user: UserSummary}) {
+  const styles = useStyles();
   const follow = useToggleFollow();
   const {navigate} = useNavigation();
   return (
@@ -257,7 +262,7 @@ function SuggestedUserCard({user}: {user: UserSummary}) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   pressed: {opacity: 0.7},
   top: {
     flexDirection: 'row',
@@ -271,14 +276,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing.md,
     marginHorizontal: spacing.md,
   },
   searchPlaceholder: {
-    color: colors.textMuted,
+    color: c.textMuted,
     fontSize: font.md,
     marginLeft: spacing.sm,
     flex: 1,
@@ -286,7 +291,7 @@ const styles = StyleSheet.create({
   scroll: {paddingBottom: spacing.xxl},
   loader: {marginVertical: spacing.lg},
   muted: {
-    color: colors.textSecondary,
+    color: c.textSecondary,
     paddingHorizontal: spacing.lg,
     fontSize: font.sm,
   },
@@ -302,12 +307,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 44,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     marginHorizontal: spacing.xs,
   },
   shortcutText: {
     marginLeft: 6,
-    color: colors.primary,
+    color: c.primary,
     fontWeight: weight.semibold,
     fontSize: font.sm,
   },
@@ -317,26 +322,26 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   topicLabel: {
     fontSize: font.xs,
-    color: colors.text,
+    color: c.text,
     marginTop: 6,
     textAlign: 'center',
   },
-  topicCount: {fontSize: 10, color: colors.textMuted, marginTop: 2},
+  topicCount: {fontSize: 10, color: c.textMuted, marginTop: 2},
   inlineRetry: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
   },
   inlineRetryText: {
-    color: colors.primary,
+    color: c.primary,
     marginLeft: spacing.xs,
     fontSize: font.sm,
   },
@@ -347,21 +352,21 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-    ...shadow,
+    borderColor: c.border,
+    backgroundColor: c.white,
+    ...shadowFor(c),
   },
   userName: {flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm},
   userNameText: {
     fontSize: font.sm,
     fontWeight: weight.bold,
-    color: colors.text,
+    color: c.text,
     marginRight: 2,
     flexShrink: 1,
   },
   userSub: {
     fontSize: font.xs,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginVertical: spacing.xs,
   },
   banner: {
@@ -371,15 +376,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     padding: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     borderWidth: 1,
-    borderColor: colors.primarySoft,
+    borderColor: c.primarySoft,
   },
   bannerIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.white,
+    backgroundColor: c.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -387,7 +392,7 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: font.md,
     fontWeight: weight.bold,
-    color: colors.primary,
+    color: c.primary,
   },
-  bannerSub: {fontSize: font.xs, color: colors.textSecondary, marginTop: 2},
-});
+  bannerSub: {fontSize: font.xs, color: c.textSecondary, marginTop: 2},
+}));

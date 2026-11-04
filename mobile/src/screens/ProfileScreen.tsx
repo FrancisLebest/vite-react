@@ -5,9 +5,10 @@ import {useMe} from '../auth/AuthContext';
 import {useUnreadCounts} from '../query/messaging';
 import type {TabScreenProps} from '../navigation/types';
 import {StyleSheet} from 'react-native';
-import {spacing} from '../theme';
+import {makeStyles, spacing} from '../theme';
 
 export default function ProfileScreen({navigation}: TabScreenProps<'Profile'>) {
+  const styles = useStyles();
   const me = useMe();
   const unread = useUnreadCounts();
   return (
@@ -36,4 +37,4 @@ export default function ProfileScreen({navigation}: TabScreenProps<'Profile'>) {
   );
 }
 
-const styles = StyleSheet.create({ml: {marginLeft: spacing.md}});
+const useStyles = makeStyles(c => ({ml: {marginLeft: spacing.md}}));

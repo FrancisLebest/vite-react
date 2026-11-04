@@ -5,11 +5,12 @@ import {useAuth} from '../../auth/AuthContext';
 import {PillButton, TextField} from '../../components/ui';
 import type {RootScreenProps} from '../../navigation/types';
 import {Errors, hasErrors, validators} from '../../utils/validation';
-import {AuthLayout, FormError, authStyles} from './AuthLayout';
+import {AuthLayout, FormError, useAuthStyles} from './AuthLayout';
 
 type Field = 'identifier' | 'password';
 
 export default function LoginScreen({navigation}: RootScreenProps<'Login'>) {
+  const authStyles = useAuthStyles();
   const {login} = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
