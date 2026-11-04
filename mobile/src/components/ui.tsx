@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {mediaUrl} from '../config';
+import {t} from '../i18n';
 import {font, makeStyles, radius, spacing, useTheme, weight, MAX_CONTENT_WIDTH} from '../theme';
 
 export {Icon};
@@ -275,25 +276,38 @@ export function PillButton({
 }
 
 /** Follow / Following toggle used across feed, search, users. */
+/** Follow / Requested (private account, pending) / Following. */
 export function FollowButton({
   following,
+  requested,
   onPress,
   small = true,
 }: {
   following: boolean;
+  requested?: boolean;
   onPress: () => void;
   small?: boolean;
 }) {
   const styles = useStyles();
+  const title = following ? t('Following') : requested ? t('Requested') : t('Follow');
   return (
     <PillButton
       small={small}
-      title={following ? 'Following' : 'Follow'}
-      variant={following ? 'outline' : 'solid'}
+      title={title}
+      variant={following ? 'outline' : requested ? 'soft' : 'solid'}
+      accessibilityLabel={
+        following ? t('Unfollow') : requested ? t('Cancel follow request') : t('Follow')
+      }
       onPress={onPress}
       style={styles.followBtn}
     />
   );
+}
+
+/** Spread into <FollowButton> from any UserSummary (v1 and v1.1 servers). */
+export function followProps(u: {isFollowing: boolean; followStatus?: string}) {
+  const status = u.followStatus ?? (u.isFollowing ? 'following' : 'none');
+  return {following: status === 'following', requested: status === 'requested'};
 }
 
 export function JoinButton({
@@ -993,4 +1007,50 @@ const useFieldStyles = makeStyles(c => ({
   multiline: {minHeight: 96, textAlignVertical: 'top'},
   error: {color: c.danger, fontSize: font.sm, marginTop: 4},
   hint: {color: c.textMuted, fontSize: font.xs, marginTop: 4},
+}));
+
+/* ------------------------------------------------------------------ */
+/* Modal header (close · title · action)                               */
+/* ------------------------------------------------------------------ */
+
+export function ModalHeader({
+  title,
+  onClose,
+  right,
+}: {
+  title: string;
+  onClose: () => void;
+  right?: React.ReactNode;
+}) {
+  const styles = useModalStyles();
+  return (
+    <View style={styles.header}>
+      <IconButton name="close" label={t('Close')} onPress={onClose} />
+      <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
+        {title}
+      </Text>
+      <View style={styles.right}>{right}</View>
+    </View>
+  );
+}
+
+const useModalStyles = makeStyles(c => ({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
+  },
+  title: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: font.lg,
+    fontWeight: weight.bold,
+    color: c.text,
+    marginHorizontal: spacing.sm,
+  },
+  right: {minWidth: 32, alignItems: 'flex-end'},
 }));

@@ -21,8 +21,19 @@ import {
   applyIncomingMessage,
   applyIncomingNotification,
 } from '../query/messaging';
+import {applyPostFailed, applyPostReady} from '../query/v11';
 
 type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+type PostStatusListener = (postId: string, status: 'ready' | 'failed') => void;
+const postStatusListeners = new Set<PostStatusListener>();
+/** Subscribe to post:ready / post:failed (upload screen, toasts). */
+export function onPostStatus(l: PostStatusListener) {
+  postStatusListeners.add(l);
+  return () => {
+    postStatusListeners.delete(l);
+  };
+}
 
 type TypingListener = (conversationId: string, user: UserSummary) => void;
 
@@ -75,6 +86,11 @@ export function SocketProvider({
     socket.on('disconnect', () => setConnected(false));
     socket.on('connect_error', err => {
       setConnected(false);
+      if (err.message === 'ACCOUNT_SUSPENDED') {
+        socket.disconnect();
+        client.notifySuspended(null);
+        return;
+      }
       if (err.message === 'UNAUTHORIZED' && !refreshing) {
         refreshing = true;
         client
@@ -96,6 +112,15 @@ export function SocketProvider({
     socket.on('conversation:read', ({conversationId, userId}) =>
       applyConversationRead(qc, conversationId, userId, meRef.current),
     );
+    // v1.1 video pipeline: the author's processing post becomes ready / failed.
+    socket.on('post:ready', ({post}) => {
+      applyPostReady(qc, post);
+      postStatusListeners.forEach(l => l(post.id, 'ready'));
+    });
+    socket.on('post:failed', ({postId}) => {
+      applyPostFailed(qc, postId);
+      postStatusListeners.forEach(l => l(postId, 'failed'));
+    });
     socket.on('typing', ({conversationId, user}) => {
       if (user.id !== meRef.current) {
         typingListeners.current.forEach(l => l(conversationId, user));

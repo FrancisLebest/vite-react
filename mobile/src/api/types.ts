@@ -131,6 +131,17 @@ export interface Post {
   likedByMe: boolean;
   bookmarkedByMe: boolean;
   createdAt: ISODate;
+  /* ---- v1.1 (optional so v1 servers keep working) ---- */
+  status?: PostStatus;
+  editedAt?: ISODate | null;
+  poll?: Poll | null;
+  series?: SeriesRef | null;
+  repostCount?: number;
+  repostedByMe?: boolean;
+  /** only on following-feed items that appear because someone you follow reposted */
+  repostedBy?: UserSummary | null;
+  isPinned?: boolean;
+  pinnedCommentId?: string | null;
 }
 
 export interface Comment {
@@ -139,6 +150,12 @@ export interface Comment {
   author: UserSummary;
   createdAt: ISODate;
   postId: ID;
+  /* ---- v1.1 ---- */
+  parentId?: string | null;
+  replyCount?: number;
+  likeCount?: number;
+  likedByMe?: boolean;
+  isPinned?: boolean;
 }
 
 export type CommunityKind = 'university' | 'faculty' | 'topic';

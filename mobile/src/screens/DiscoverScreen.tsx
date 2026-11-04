@@ -19,6 +19,7 @@ import {
   EmptyState,
   ErrorState,
   FollowButton,
+  followProps,
   Icon,
   IconButton,
   Logo,
@@ -254,8 +255,7 @@ function SuggestedUserCard({user}: {user: UserSummary}) {
       <Text style={styles.userSub} numberOfLines={1}>
         {user.university ?? `@${user.username}`}
       </Text>
-      <FollowButton
-        following={user.isFollowing}
+      <FollowButton {...followProps(user)}
         onPress={() => follow.mutate(user)}
       />
     </Pressable>

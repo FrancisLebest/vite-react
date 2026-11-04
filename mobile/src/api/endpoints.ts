@@ -313,7 +313,221 @@ export function createEndpoints(c: ApiClient) {
         details?: string,
       ) => c.post<void>('/reports', {targetType, targetId, reason, details}),
     },
+    /* ------------------------------- v1.1 ------------------------------- */
+
+    push: {
+      register: (token: string, platform: 'ios' | 'android') =>
+        c.post<void>('/users/me/push-token', {token, platform}),
+      unregister: (token: string) =>
+        c.delete<void>('/users/me/push-token', {token}),
+    },
+
+    comments: {
+      replies: (commentId: string, cursor?: string) =>
+        c.get<Page<Comment>>(`/comments/${enc(commentId)}/replies`, {cursor}),
+      like: (id: string) =>
+        c.post<{liked: boolean; likeCount: number}>(`/comments/${enc(id)}/like`),
+      unlike: (id: string) =>
+        c.delete<{liked: boolean; likeCount: number}>(
+          `/comments/${enc(id)}/like`,
+        ),
+      pin: (id: string) => c.post<Comment>(`/comments/${enc(id)}/pin`),
+      unpin: (id: string) => c.delete<void>(`/comments/${enc(id)}/pin`),
+    },
+
+    polls: {
+      vote: (postId: string, optionId: string) =>
+        c.post<Poll>(`/posts/${enc(postId)}/poll/vote`, {optionId}),
+    },
+
+    series: {
+      create: (input: SeriesInput, opts?: UploadOptions) =>
+        seriesWrite(c, 'POST', '/series', input, opts),
+      get: (id: string) => c.get<SeriesDetail>(`/series/${enc(id)}`),
+      update: (id: string, input: Partial<SeriesInput>, opts?: UploadOptions) =>
+        seriesWrite(c, 'PATCH', `/series/${enc(id)}`, input, opts),
+      remove: (id: string) => c.delete<void>(`/series/${enc(id)}`),
+      addItem: (id: string, postId: string, position?: number) =>
+        c.post<SeriesDetail>(`/series/${enc(id)}/items`, {postId, position}),
+      removeItem: (id: string, postId: string) =>
+        c.delete<SeriesDetail>(`/series/${enc(id)}/items/${enc(postId)}`),
+      reorder: (id: string, postIds: string[]) =>
+        c.request<SeriesDetail>('PUT', `/series/${enc(id)}/items`, {
+          body: {postIds},
+        }),
+      follow: (id: string) =>
+        c.post<{isFollowing: boolean; followerCount: number}>(
+          `/series/${enc(id)}/follow`,
+        ),
+      unfollow: (id: string) =>
+        c.delete<{isFollowing: boolean; followerCount: number}>(
+          `/series/${enc(id)}/follow`,
+        ),
+      byUser: (userId: string, cursor?: string) =>
+        c.get<Page<Series>>(`/users/${enc(userId)}/series`, {cursor}),
+      following: (cursor?: string) =>
+        c.get<Page<Series>>('/me/series/following', {cursor}),
+    },
+
+    social: {
+      hashtag: (tag: string, sort: 'recent' | 'popular', cursor?: string) =>
+        c.get<HashtagPage>(
+          `/hashtags/${enc(tag.replace(/^#/, '').toLowerCase())}`,
+          {sort, cursor},
+        ),
+      repost: (id: string) =>
+        c.post<{reposted: boolean; repostCount: number}>(
+          `/posts/${enc(id)}/repost`,
+        ),
+      unrepost: (id: string) =>
+        c.delete<{reposted: boolean; repostCount: number}>(
+          `/posts/${enc(id)}/repost`,
+        ),
+      reposts: (userId: string, cursor?: string) =>
+        c.get<Page<Post>>(`/users/${enc(userId)}/reposts`, {cursor}),
+      editPost: (id: string, body: {text?: string; category?: CategoryId}) =>
+        c.patch<Post>(`/posts/${enc(id)}`, body),
+      pin: (id: string) =>
+        c.post<{isPinned: boolean; pinnedPostIds: string[]}>(
+          `/posts/${enc(id)}/pin`,
+        ),
+      unpin: (id: string) =>
+        c.delete<{isPinned: boolean; pinnedPostIds: string[]}>(
+          `/posts/${enc(id)}/pin`,
+        ),
+      pinned: (userId: string) => c.get<Post[]>(`/users/${enc(userId)}/pinned`),
+      history: (cursor?: string) =>
+        c.get<Page<HistoryEntry>>('/me/history', {cursor}),
+      clearHistory: () => c.delete<void>('/me/history'),
+      removeHistory: (postId: string) =>
+        c.delete<void>(`/me/history/${enc(postId)}`),
+      mentions: (q: string, limit = 8) =>
+        c.get<UserSummary[]>('/users/mentions', {q, limit}),
+    },
+
+    privacy: {
+      setInterests: (categories: CategoryId[]) =>
+        c.request<Me>('PUT', '/users/me/interests', {body: {categories}}),
+      settings: () => c.get<Settings>('/users/me/settings'),
+      updateSettings: (patch: SettingsPatch) =>
+        c.request<Settings>('PUT', '/users/me/settings', {body: patch}),
+      followRequests: (cursor?: string) =>
+        c
+          .get<Page<FollowRequest>>('/me/follow-requests', {cursor})
+          .then(p => ({
+            ...p,
+            // FollowRequest has no id: key list items by the requester id
+            items: p.items.map(r => ({...r, id: r.user.id})),
+          })),
+      followRequestCount: () =>
+        c.get<{count: number}>('/me/follow-requests/count'),
+      accept: (userId: string) =>
+        c.post<void>(`/me/follow-requests/${enc(userId)}/accept`),
+      decline: (userId: string) =>
+        c.post<void>(`/me/follow-requests/${enc(userId)}/decline`),
+      removeFollower: (userId: string) =>
+        c.delete<void>(`/users/${enc(userId)}/follower`),
+    },
+
+    verification: {
+      verifyEmail: (code: string) => c.post<Me>('/auth/verify-email', {code}),
+      resendEmail: () => c.post<void>('/auth/resend-verification'),
+      request: (message?: string) =>
+        c.post<VerificationRequest>('/me/verification-request', {message}),
+      latest: () =>
+        c.get<VerificationRequest | null>('/me/verification-request'),
+    },
+
+    analytics: {
+      get: (range: AnalyticsRange) =>
+        c.get<Analytics>('/me/analytics', {range}),
+    },
+
+    admin: {
+      reports: (status: ReportStatus, cursor?: string) =>
+        c.get<Page<Report>>('/admin/reports', {status, cursor}),
+      resolve: (
+        id: string,
+        action: 'none' | 'remove_content' | 'suspend_user',
+        note?: string,
+      ) => c.post<Report>(`/admin/reports/${enc(id)}/resolve`, {action, note}),
+      dismiss: (id: string, note?: string) =>
+        c.post<Report>(`/admin/reports/${enc(id)}/dismiss`, {note}),
+      suspend: (userId: string, reason?: string) =>
+        c.post<void>(`/admin/users/${enc(userId)}/suspend`, {reason}),
+      unsuspend: (userId: string) =>
+        c.delete<void>(`/admin/users/${enc(userId)}/suspend`),
+      /** Requested by mobile (v1.1) — see docs/API.md */
+      suspendedUsers: (cursor?: string) =>
+        c.get<Page<SuspendedUser>>('/admin/users/suspended', {cursor}),
+      verificationRequests: (status: VerificationStatus, cursor?: string) =>
+        c.get<Page<VerificationRequest>>('/admin/verification-requests', {
+          status,
+          cursor,
+        }),
+      approve: (id: string) =>
+        c.post<VerificationRequest>(
+          `/admin/verification-requests/${enc(id)}/approve`,
+        ),
+      reject: (id: string) =>
+        c.post<VerificationRequest>(
+          `/admin/verification-requests/${enc(id)}/reject`,
+        ),
+    },
+
+    events: {
+      create: (communityId: string, body: EventInput) =>
+        c.post<CommunityEvent>(`/communities/${enc(communityId)}/events`, body),
+      list: (communityId: string, when: 'upcoming' | 'past', cursor?: string) =>
+        c.get<Page<CommunityEvent>>(`/communities/${enc(communityId)}/events`, {
+          when,
+          cursor,
+        }),
+      get: (id: string) => c.get<CommunityEvent>(`/events/${enc(id)}`),
+      update: (id: string, body: Partial<EventInput>) =>
+        c.patch<CommunityEvent>(`/events/${enc(id)}`, body),
+      remove: (id: string) => c.delete<void>(`/events/${enc(id)}`),
+      rsvp: (id: string, status: RsvpStatus) =>
+        c.request<RsvpResult>('PUT', `/events/${enc(id)}/rsvp`, {
+          body: {status},
+        }),
+      clearRsvp: (id: string) =>
+        c.delete<RsvpResult>(`/events/${enc(id)}/rsvp`),
+      mine: (goingOnly: boolean, cursor?: string) =>
+        c.get<Page<CommunityEvent>>('/me/events', {
+          rsvp: goingOnly ? 'going' : undefined,
+          cursor,
+        }),
+    },
   };
+}
+
+export type RsvpResult = {myRsvp: RsvpStatus | null; goingCount: number};
+
+export type SuspendedUser = UserSummary & {
+  suspendedAt?: string;
+  suspendedReason?: string | null;
+};
+
+function seriesWrite(
+  c: ApiClient,
+  method: 'POST' | 'PATCH',
+  path: string,
+  input: Partial<SeriesInput>,
+  opts?: UploadOptions,
+): Promise<Series> {
+  const {cover, ...fields} = input;
+  if (!cover) {
+    return c.request<Series>(method, path, {body: fields});
+  }
+  const form = new FormData();
+  Object.entries(fields).forEach(([k, v]) => {
+    if (v !== undefined) {
+      form.append(k, String(v));
+    }
+  });
+  form.append('cover', cover as unknown as Blob);
+  return c.upload<Series>(method, path, form, opts);
 }
 
 export type Endpoints = ReturnType<typeof createEndpoints>;

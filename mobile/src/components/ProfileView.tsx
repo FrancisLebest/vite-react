@@ -31,6 +31,7 @@ import {
   EmptyState,
   ErrorState,
   FollowButton,
+  followProps,
   IconButton,
   ListFooter,
   LoadingState,
@@ -266,8 +267,7 @@ function ProfileContent({
             />
           ) : (
             <>
-              <FollowButton
-                following={user.isFollowing}
+              <FollowButton {...followProps(user)}
                 onPress={() => follow.mutate(user)}
               />
               <PillButton

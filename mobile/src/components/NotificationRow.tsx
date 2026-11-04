@@ -14,6 +14,13 @@ const ICONS: Record<NotificationType, string> = {
   mention: 'at',
   community_join: 'people',
   message: 'mail',
+  reply: 'return-down-forward',
+  comment_like: 'heart',
+  follow_request: 'person-add-outline',
+  follow_accepted: 'checkmark-circle',
+  repost: 'repeat',
+  event: 'calendar',
+  verification: 'checkmark-circle',
 };
 
 export function NotificationRow({

@@ -17,6 +17,7 @@ import {
   BackHeader,
   ErrorState,
   FollowButton,
+  followProps,
   IconButton,
   LoadingState,
   PillButton,
@@ -190,8 +191,7 @@ function VideoDetail({post}: {post: Post}) {
           <Text style={styles.meta}>@{author.username}</Text>
         </View>
         {author.id !== me?.id ? (
-          <FollowButton
-            following={author.isFollowing}
+          <FollowButton {...followProps(author)}
             onPress={() => follow.mutate(author)}
           />
         ) : null}

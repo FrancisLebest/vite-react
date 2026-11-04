@@ -22,6 +22,7 @@ import {confirmDestructive, useReport, useSheet} from './Sheet';
 import {
   Avatar,
   FollowButton,
+  followProps,
   Icon,
   IconAvatar,
   IconButton,
@@ -235,8 +236,7 @@ export function UserRow({
       {right !== undefined ? (
         right
       ) : isMe ? null : (
-        <FollowButton
-          following={user.isFollowing}
+        <FollowButton {...followProps(user)}
           onPress={() => follow.mutate(user)}
         />
       )}

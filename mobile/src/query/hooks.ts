@@ -8,6 +8,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {api} from '../api';
+import type {FollowResult} from '../api/endpoints';
 import type {
   Category,
   CommunitiesParams,
@@ -18,6 +19,7 @@ import type {
   PostType,
   UserSummary,
   UsersParams,
+  FollowStatus,
 } from '../api/types';
 import {STATIC_CATEGORIES} from '../constants/categories';
 import {
@@ -295,45 +297,60 @@ export function useSuggestedUsers() {
   });
 }
 
+/** v1.1-aware follow state (followStatus falls back to isFollowing on v1 servers). */
+export function followStateOf(u: Pick<UserSummary, 'isFollowing' | 'followStatus'>): FollowStatus {
+  return u.followStatus ?? (u.isFollowing ? 'following' : 'none');
+}
+
+type Followable = Pick<UserSummary, 'id' | 'isFollowing' | 'followStatus' | 'isPrivate'>;
+
+/**
+ * Follow / unfollow / cancel request. A private account gets a pending
+ * request ("Requested"); tapping again cancels it (DELETE /users/:id/follow).
+ */
 export function useToggleFollow() {
   const qc = useQueryClient();
-  return useMutation<
-    {isFollowing: boolean; followerCount: number},
-    unknown,
-    Pick<UserSummary, 'id' | 'isFollowing'>,
-    Snapshot
-  >({
+  return useMutation<FollowResult, unknown, Followable, Snapshot>({
     mutationFn: u =>
-      u.isFollowing ? api.users.unfollow(u.id) : api.users.follow(u.id),
-    onMutate: u =>
-      patchEntities(qc, isUser(u.id), o => {
-        const next: Record<string, unknown> = {
+      followStateOf(u) === 'none' ? api.users.follow(u.id) : api.users.unfollow(u.id),
+    onMutate: u => {
+      const state = followStateOf(u);
+      const next: FollowStatus =
+        state !== 'none' ? 'none' : u.isPrivate ? 'requested' : 'following';
+      return patchEntities(qc, isUser(u.id), o => {
+        const patched: Record<string, unknown> = {
           ...o,
-          isFollowing: !u.isFollowing,
+          isFollowing: next === 'following',
+          followStatus: next,
         };
         if (typeof o.followerCount === 'number') {
-          next.followerCount = Math.max(
-            0,
-            o.followerCount + (u.isFollowing ? -1 : 1),
-          );
+          const delta =
+            (next === 'following' ? 1 : 0) - (state === 'following' ? 1 : 0);
+          patched.followerCount = Math.max(0, o.followerCount + delta);
         }
-        return next;
-      }),
+        return patched;
+      });
+    },
     onError: (_e, _u, snap) => restore(qc, snap),
     onSuccess: (res, u) => {
+      const status: FollowStatus =
+        res.followStatus ?? (res.isFollowing ? 'following' : 'none');
       patchEntities(qc, isUser(u.id), o =>
         typeof o.followerCount === 'number'
           ? {
               ...o,
               isFollowing: res.isFollowing,
+              followStatus: status,
               followerCount: res.followerCount,
             }
-          : {...o, isFollowing: res.isFollowing},
+          : {...o, isFollowing: res.isFollowing, followStatus: status},
       );
     },
-    onSettled: () => {
+    onSettled: (_r, _e, u) => {
       qc.invalidateQueries(['following']);
       qc.invalidateQueries(['feed', {tab: 'following'}]);
+      // A newly approved/followed private account reveals its posts.
+      qc.invalidateQueries(['userPosts', u.id]);
     },
   });
 }
