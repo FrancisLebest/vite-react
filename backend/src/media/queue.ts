@@ -64,7 +64,9 @@ function redisConnection() {
 async function getBullQueue(): Promise<BullQueue> {
   if (!bullQueue) {
     const { Queue } = await import('bullmq');
-    bullQueue = new Queue(QUEUE_NAME, { connection: redisConnection() }) as unknown as BullQueue;
+    const q = new Queue(QUEUE_NAME, { connection: redisConnection() });
+    q.on('error', (err) => logger.error({ err }, 'Video queue error'));
+    bullQueue = q as unknown as BullQueue;
   }
   return bullQueue;
 }

@@ -170,7 +170,7 @@ Category = { id: CategoryId, label: string, icon: string /* Ionicons */ }
 
 - `Conversation.participants` lists the **other** participants (the viewer is excluded). For DMs, `title`/`avatarUrl` are the other user's name/avatar.
 - `User.mutualCount` = number of users the viewer follows who also follow this user (0 for yourself).
-- `Media.thumbnailUrl` is the generated JPEG for videos, the image URL itself for images, `null` for audio. Videos are remuxed to MP4 (faststart) when possible, never transcoded.
+- `Media.thumbnailUrl` is the generated JPEG for videos, the image URL itself for images, `null` for audio. Post videos are transcoded in the background since v1.1 (see below); message videos are only remuxed to MP4 (faststart).
 - Blocks: if the target blocked the viewer, `GET /users/:id` and that user's posts return `404`; the blocker still sees the profile with `isBlocked: true` (and an empty post list) so they can unblock. Blocking removes follows in both directions.
 - `POST /communities` defaults: `icon = 'people-outline'`, `color = '#6C5CE7'`, `description = ''`. Owner leaving → `403`.
 - Unliking / unfollowing / leaving removes the corresponding notification; deleting a comment or post removes notifications attached to it.
@@ -331,7 +331,7 @@ VerificationRequest = { id, user: UserSummary, message: string | null, status: '
 
 ### 4a. Polls & quizzes
 
-- Create with `POST /posts` (only `type=post`): field `poll` = JSON (in multipart, a JSON **string**):
+- Create with `POST /posts` (only `type=post`; a post with a poll needs no `text`): field `poll` = JSON (in multipart, a JSON **string**):
   `{ question?: string (≤ 200), options: string[] (2..4, each 1..100), correctOptionIndex?: number /* 0-based → makes it a quiz */ }`.
 - `POST /posts/:id/poll/vote` `{ optionId }` → `Poll` (with results). `409 CONFLICT` if already voted, `400` for an unknown option. Authors cannot vote on their own poll (`403`).
 
@@ -377,7 +377,7 @@ VerificationRequest = { id, user: UserSummary, message: string | null, status: '
 | DELETE | `/users/:id/follow` | unfollows **or cancels a pending request** → same shape |
 | GET | `/me/follow-requests?cursor` | page of `FollowRequest` (received), newest first |
 | GET | `/me/follow-requests/count` | `{ count }` |
-| POST | `/me/follow-requests/:userId/accept` | → `204` (`follow_accepted` notification to the requester) |
+| POST | `/me/follow-requests/:userId/accept` | → `204` (`follow_accepted` notification to the requester, `follow` notification to you) |
 | POST | `/me/follow-requests/:userId/decline` | → `204` |
 | DELETE | `/users/:id/follower` | remove someone who follows you → `204` |
 
@@ -430,7 +430,7 @@ A code is e-mailed at registration (logged to console without SMTP). Unverified 
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/communities/:id/events` | members only `{ title (3..120), description? (≤ 2000), startsAt (ISO, future), endsAt? (> startsAt), location? (≤ 200), onlineUrl? (http/https URL) }` → `201 Event`. Notifies all other members (`event` notification + push, respecting `notifications.events`) |
+| POST | `/communities/:id/events` | members only `{ title (3..120), description? (≤ 2000), startsAt (ISO, future), endsAt? (> startsAt), location? (≤ 200), onlineUrl? (http/https URL) }` → `201 Event`. The creator is automatically RSVP'd `going`. Notifies all other members (`event` notification + push, respecting `notifications.events`) |
 | GET | `/communities/:id/events?when=upcoming\|past&cursor` | page of `Event` (upcoming: soonest first, includes events in progress; past: most recent first) |
 | GET | `/events/:id` | `Event` |
 | PATCH | `/events/:id` | creator or community owner, same fields optional → `Event` |
@@ -438,6 +438,14 @@ A code is e-mailed at registration (logged to console without SMTP). Unverified 
 | PUT | `/events/:id/rsvp` | `{ status: 'going' \| 'not_going' }` (members only) → `{ myRsvp, goingCount }` |
 | DELETE | `/events/:id/rsvp` | → `{ myRsvp: null, goingCount }` |
 | GET | `/me/events?rsvp=going&cursor` | upcoming events of my communities, soonest first; `rsvp=going` keeps only events I'm going to |
+
+### Additional behaviour notes (v1.1)
+
+- `Series.itemCount` counts only `ready` posts for non-owners (all items for the owner).
+- Suspended users disappear for everyone else: their profile returns `404`, their posts are hidden, they receive no notifications.
+- Deleting a post (by its author or an admin) closes its open reports with `status: 'reviewed'`, `resolution: 'content_removed'` (reports are kept as history).
+- `verification` notifications cannot be disabled. Trending topics/hashtags and hashtag pages only count `ready` posts.
+- The content filter also applies to poll options.
 
 ### Realtime additions (Socket.IO)
 

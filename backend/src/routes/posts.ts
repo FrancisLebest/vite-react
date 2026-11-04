@@ -347,10 +347,14 @@ postsRouter.delete(
   }),
 );
 
-/** Deletes a post, its reports and its media. */
+/** Deletes a post and its media. */
 export async function deletePost(id: string): Promise<void> {
   const r = await pool.query('DELETE FROM posts WHERE id = $1 RETURNING media_key, thumbnail_key, source_key', [id]);
-  await pool.query(`DELETE FROM reports WHERE target_type = 'post' AND target_id = $1 AND status = 'open'`, [id]);
+  // Open reports about it are closed (kept for the moderation history).
+  await pool.query(
+    `UPDATE reports SET status = 'reviewed', resolution = 'content_removed', resolved_at = now() WHERE target_type = 'post' AND target_id = $1 AND status = 'open'`,
+    [id],
+  );
   const row = r.rows[0];
   if (row) deleteKeys([row.media_key, row.thumbnail_key, row.source_key]);
 }
